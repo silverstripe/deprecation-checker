@@ -1,0 +1,16 @@
+#!/usr/bin/env php
+<?php
+
+use Composer\InstalledVersions;
+use Silverstripe\DeprecationChangelogGenerator\Command;
+use Symfony\Component\Console\Application;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$application = new Application('Silverstripe Deprecation Changelog Generator', InstalledVersions::getRootPackage()['pretty_version']);
+$application->addCommands([
+    new Command\CloneCommand(),
+    new Command\GenerateCommand(),
+]);
+$application->run();
+

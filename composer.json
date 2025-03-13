@@ -1,0 +1,19 @@
+{
+    "name": "silverstripe/deprecation-changelog-generator",
+    "autoload": {
+        "psr-4": {
+            "Silverstripe\\DeprecationChangelogGenerator\\": "src/"
+        }
+    },
+    "require": {
+        "php": "^8.3",
+        "symfony/console": "^7.2",
+        "composer-runtime-api": "*",
+        "knplabs/packagist-api": "^2.1",
+        "composer/semver": "^3.4",
+        "symfony/filesystem": "^7.2",
+        "symfony/process": "^7.2",
+        "silverstripe/supported-modules": "^1.1",
+        "nikic/php-parser": "^5.4"
+    }
+}
