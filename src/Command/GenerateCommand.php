@@ -36,6 +36,7 @@ use Symfony\Component\Console\Exception\InvalidOptionException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 
 #[AsCommand('generate', 'Generate the deprecation section of a changelog')]
@@ -47,6 +48,10 @@ class GenerateCommand extends BaseCommand
     ];
 
     public const string DIR_OUTPUT = 'output';
+
+    public const string FILE_ACTIONS = 'actions-required.json';
+
+    public const string FILE_CHANGES = 'breaking-changes.json';
 
     private array $metaDataFrom;
 
@@ -90,7 +95,7 @@ class GenerateCommand extends BaseCommand
             }
         }
 
-        $this->findInfoAboutDeprecations($parsed);
+        $this->findInfoAboutDeprecations($parsed, $dataDir);
         // @TODO separate method for generating the changelog chunk
 
         // Output any
@@ -254,13 +259,27 @@ class GenerateCommand extends BaseCommand
             }
         });
 
+        $this->output->writeln('Parsing complete.');
         return $project;
     }
 
-    private function findInfoAboutDeprecations(Project $parsedProject): void
+    private function findInfoAboutDeprecations(Project $parsedProject, string $dataDir): void
     {
+        $this->output->writeln('Comparing API between versions...');
+        $outputDir = Path::join($dataDir, GenerateCommand::DIR_OUTPUT);
         $comparer = new CodeComparer($parsedProject, $this->output);
         $comparer->compare();
+        $actions = $comparer->getActionsToTake();
+        $changes = $comparer->getBreakingChanges();
+
+        $filesystem = new Filesystem();
+        $filesystem->mkdir($outputDir);
+        // @TODO ask before overriding existing data
+
+        // @TODO maybe this comes as its own step? Or only one of these written like this, and the other written only as a real changelog blob?
+        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_ACTIONS), json_encode($actions, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_CHANGES), json_encode($changes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $this->output->writeln('Comparison complete.');
     }
 
     /**

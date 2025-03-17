@@ -1,3 +1,5 @@
+/.ddev/
+/.vscode/
 /vendor/
 /cloned/
 /output/
