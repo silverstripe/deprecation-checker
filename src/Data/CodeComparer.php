@@ -158,100 +158,11 @@ class CodeComparer
         // @TODO check if "hint" includes @return PHPDoc - if so, can I get the strict PHP hint?
         if ($functionFrom->getHintAsString() !== $functionTo->getHintAsString()) {
             $this->breakingChanges[$module]['returnType']['functions'][$name] = [
-                CodeComparer::FROM => $functionFrom->getHint(),
-                CodeComparer::TO => $functionTo->getHint(),
+                CodeComparer::FROM => $functionFrom->getHintAsString(),
+                CodeComparer::TO => $functionTo->getHintAsString(),
             ];
         }
         $this->checkParameters($functionFrom->getParameters(), $functionTo->getParameters(), $module);
-    }
-
-    /**
-     * @param array<string,ParameterReflection> $parametersFrom
-     * @param array<string,ParameterReflection> $parametersTo
-     */
-    private function checkParameters(array $parametersFrom, array $parametersTo, string $module) {
-        // Compare parameters that have the same name in both versions or removed in the new one
-        foreach ($parametersFrom as $paramName => $parameter) {
-            $this->checkParameter($paramName, $parameter, $parametersTo[$paramName] ?? null, $module);
-        }
-
-        // New params are also breaking API changes so we need to be aware of those
-        $newParams = array_diff($parametersTo, $parametersFrom);
-        foreach ($newParams as $paramName => $newParam) {
-            $this->breakingChanges[$module]['new']['parameters'][] = [
-                'name' => $paramName,
-                'hint' => $newParam->getHint(),
-                'function' => $newParam->getFunction()?->getName(),
-                'method' => $newParam->getMethod()?->getName(),
-                'class' => $newParam->getClass()?->getName(),
-            ];
-        }
-    }
-
-    private function checkParameter(
-        string $name,
-        ParameterReflection $parameterFrom,
-        ParameterReflection $parameterTo,
-        string $module
-    ) {
-        $data = [
-            'function' => $parameterFrom->getFunction()?->getName(),
-            'method' => $parameterFrom->getMethod()?->getName(),
-            // The getClass() method will check against the method, so we have to check if the method's there or not first.
-            'class' => $parameterFrom->getMethod() ? $parameterFrom->getClass()?->getName() : null,
-        ];
-
-        // Param has been removed (or renamed - we can't easily tell the difference)
-        // @TODO old compare code may help with telling if it was just renamed??
-        if ($parameterTo === null) {
-            // If the function is internal, we don't need to do anything.
-            if (!$parameterFrom->isInternal()) {
-                // Note the breaking change.
-                $this->breakingChanges[$module]['removed']['params'][$name] = $data;
-            }
-            return;
-        }
-
-        // Parameter didn't used to be @internal but it is now (removes it from our public API surface)
-        if ($parameterFrom->isInternal() && !$parameterTo->isInternal()) {
-            $this->breakingChanges[$module]['internal']['params'][$name] = $data;
-        }
-
-        // Changed whether it's variable-length (preceded with `...`) or not
-        if ($parameterFrom->getVariadic() !== $parameterTo->getVariadic()) {
-            $this->breakingChanges[$module]['variadic']['params'][$name] = [
-                ...$data,
-                'isVariadicNow' => $parameterTo->getVariadic(),
-            ];
-        }
-
-        // Changed whether it's passed by reference (preceeded with `&`) or not
-        if ($parameterFrom->isByRef() !== $parameterTo->isByRef()) {
-            $this->breakingChanges[$module]['passByRef']['params'][$name] = [
-                ...$data,
-                'isPassByRefNow' => $parameterTo->isByRef(),
-            ];
-        }
-
-        // Change to typehint
-        // @TODO validate if this includes @param or not
-        if ($parameterFrom->getHintAsString() !== $parameterTo->getHintAsString()) {
-            $this->breakingChanges[$module]['type']['params'][$name] = [
-                ...$data,
-                CodeComparer::FROM => $parameterFrom->getHint(),
-                CodeComparer::TO => $parameterTo->getHint(),
-            ];
-        }
-
-        // Change to the default value
-        // @TODO May need to do a more manual comparison here.
-        if ($parameterFrom->getDefault() !== $parameterTo->getDefault()) {
-            $this->breakingChanges[$module]['default']['params'][$name] = [
-                ...$data,
-                CodeComparer::FROM => $parameterFrom->getDefault(),
-                CodeComparer::TO => $parameterTo->getDefault(),
-            ];
-        }
     }
 
     // @TODO lots of overlap with this and functions - and probably others. E.g. same diff for still deprecated.
@@ -329,9 +240,29 @@ class CodeComparer
             $this->breakingChanges[$module]['final']['classes'] = $fqcn;
         }
 
+        $this->checkConstants($classFrom->getConstants(true), $classTo->getConstants(true));
         $this->checkProperties($classFrom->getProperties(true), $classTo->getProperties(true));
         $this->checkMethods($classFrom->getMethods(true), $classTo->getMethods(true));
-        $this->checkConstants($classFrom->getConstants(true), $classTo->getConstants(true));
+    }
+
+    /**
+     * Undocumented function
+     *
+     * @param ConstantReflection[] $constsFrom
+     * @param ConstantReflection[] $constsTo
+     */
+    private function checkConstants(array $constsFrom, array $constsTo)
+    {
+
+    }
+
+    // @TODO check the class type for this
+    private function checkConstant(ConstantReflection $constFrom, ConstantReflection $constTo)
+    {
+        // Check for anything exists in "from" but removed in "to"
+        // Check for signature changes
+        // Check for anything removed but not deprecated
+        // Check for anything deprecated but not removed
     }
 
     /**
@@ -361,7 +292,7 @@ class CodeComparer
      */
     private function checkMethods(array $methodsFrom, array $methodsTo)
     {
-
+        // @TODO make sure no @method tags are listed in here.
     }
 
     private function checkMethod(MethodReflection $methodFrom, MethodReflection $methodTo)
@@ -373,23 +304,93 @@ class CodeComparer
     }
 
     /**
-     * Undocumented function
-     *
-     * @param ConstantReflection[] $constsFrom
-     * @param ConstantReflection[] $constsTo
+     * @param array<string,ParameterReflection> $parametersFrom
+     * @param array<string,ParameterReflection> $parametersTo
      */
-    private function checkConstants(array $constsFrom, array $constsTo)
-    {
+    private function checkParameters(array $parametersFrom, array $parametersTo, string $module) {
+        // Compare parameters that have the same name in both versions or removed in the new one
+        foreach ($parametersFrom as $paramName => $parameter) {
+            $this->checkParameter($paramName, $parameter, $parametersTo[$paramName] ?? null, $module);
+        }
 
+        // New params are also breaking API changes so we need to be aware of those
+        $newParams = array_diff($parametersTo, $parametersFrom);
+        foreach ($newParams as $paramName => $newParam) {
+            $this->breakingChanges[$module]['new']['parameters'][] = [
+                'name' => $paramName,
+                'hint' => $newParam->getHint(),
+                'function' => $newParam->getFunction()?->getName(),
+                'method' => $newParam->getMethod()?->getName(),
+                'class' => $newParam->getClass()?->getName(),
+            ];
+        }
     }
 
-    // @TODO check the class type for this
-    private function checkConstant(ConstantReflection $constFrom, ConstantReflection $constTo)
-    {
-        // Check for anything exists in "from" but removed in "to"
-        // Check for signature changes
-        // Check for anything removed but not deprecated
-        // Check for anything deprecated but not removed
+    private function checkParameter(
+        string $name,
+        ParameterReflection $parameterFrom,
+        ParameterReflection $parameterTo,
+        string $module
+    ) {
+        $data = [
+            'function' => $parameterFrom->getFunction()?->getName(),
+            'method' => $parameterFrom->getMethod()?->getName(),
+            // The getClass() method will check against the method, so we have to check if the method's there or not first.
+            'class' => $parameterFrom->getMethod() ? $parameterFrom->getClass()?->getName() : null,
+        ];
+
+        // Param has been removed (or renamed - we can't easily tell the difference)
+        // @TODO old compare code may help with telling if it was just renamed??
+        if ($parameterTo === null) {
+            // If the function is internal, we don't need to do anything.
+            if (!$parameterFrom->isInternal()) {
+                // Note the breaking change.
+                $this->breakingChanges[$module]['removed']['params'][$name] = $data;
+            }
+            return;
+        }
+
+        // Parameter didn't used to be @internal but it is now (removes it from our public API surface)
+        if ($parameterFrom->isInternal() && !$parameterTo->isInternal()) {
+            $this->breakingChanges[$module]['internal']['params'][$name] = $data;
+        }
+
+        // Changed whether it's variable-length (preceded with `...`) or not
+        if ($parameterFrom->getVariadic() !== $parameterTo->getVariadic()) {
+            $this->breakingChanges[$module]['variadic']['params'][$name] = [
+                ...$data,
+                'isVariadicNow' => $parameterTo->getVariadic(),
+            ];
+        }
+
+        // Changed whether it's passed by reference (preceeded with `&`) or not
+        if ($parameterFrom->isByRef() !== $parameterTo->isByRef()) {
+            $this->breakingChanges[$module]['passByRef']['params'][$name] = [
+                ...$data,
+                'isPassByRefNow' => $parameterTo->isByRef(),
+            ];
+        }
+
+        // Change to typehint
+        // @TODO validate if this includes @param or not
+        if ($parameterFrom->getHintAsString() !== $parameterTo->getHintAsString()) {
+            $this->breakingChanges[$module]['type']['params'][$name] = [
+                ...$data,
+                CodeComparer::FROM => $parameterFrom->getHintAsString(),
+                CodeComparer::TO => $parameterTo->getHintAsString(),
+            ];
+        }
+
+
+        // Change to the default value
+        // @TODO May need to do a more manual comparison here.
+        if ($parameterFrom->getDefault() !== $parameterTo->getDefault()) {
+            $this->breakingChanges[$module]['default']['params'][$name] = [
+                ...$data,
+                CodeComparer::FROM => $parameterFrom->getDefault(),
+                CodeComparer::TO => $parameterTo->getDefault(),
+            ];
+        }
     }
 
     /**

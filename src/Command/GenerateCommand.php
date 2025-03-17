@@ -8,7 +8,6 @@ use Doctum\Parser\ClassVisitor\InheritdocClassVisitor;
 use Doctum\Parser\ClassVisitor\MethodClassVisitor;
 use Doctum\Parser\ClassVisitor\PropertyClassVisitor;
 use Doctum\Parser\CodeParser;
-use Doctum\Parser\DocBlockParser;
 use Doctum\Parser\Filter\DefaultFilter;
 use Doctum\Parser\NodeVisitor;
 use Doctum\Parser\ParseError;
@@ -26,6 +25,7 @@ use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard as PrettyPrinter;
 use RuntimeException;
 use Silverstripe\DeprecationChangelogGenerator\Data\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Data\DocBlockParser;
 use Silverstripe\DeprecationChangelogGenerator\Data\RecipeFinder;
 use Silverstripe\DeprecationChangelogGenerator\Data\RecipeVersionCollection;
 use SilverStripe\SupportedModules\BranchLogic;
@@ -53,6 +53,8 @@ class GenerateCommand extends BaseCommand
 
     public const string FILE_CHANGES = 'breaking-changes.json';
 
+    public const string FILE_PARSE_ERRORS = 'parse-errors.json';
+
     private array $metaDataFrom;
 
     private array $metaDataTo;
@@ -76,13 +78,33 @@ class GenerateCommand extends BaseCommand
             $dataDir = Path::makeAbsolute($dataDir, getcwd());
         }
 
+        $parseErrorFile = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_PARSE_ERRORS);
+        $filesystem = new Filesystem();
+
+        if ($this->input->getOption('flush')) {
+            if ($filesystem->exists($parseErrorFile)) {
+                $filesystem->remove($parseErrorFile);
+            }
+            $filesystem->remove(Path::join($dataDir, 'cache'));
+        }
+
         $this->fetchMetaData($dataDir);
         $this->findSupportedModules();
         $parsed = $this->parseModules($dataDir);
 
         if (!empty($this->parseErrors)) {
-            // @TODO dump these to a file somewhere too
-            $parseErrorFile = 'TODO: Create a file';
+            // Dump the errors so they can be dealt with
+            $parseErrors = [];
+            foreach ($this->parseErrors as $error) {
+                $parseErrors[] = [
+                    'message' => $error->getMessage(),
+                    'file' => $error->getFile(),
+                    'line' => $error->getLine(),
+                    'tip' => $error->getTip(),
+                ];
+            }
+            $filesystem->dumpFile($parseErrorFile, $this->jsonEncode($parseErrors));
+            // Prompt in case dev doesn't want to continue with these errors.
             $countParseErrors = count($this->parseErrors);
             $continue = $this->output->confirm(
                 "Found $countParseErrors errors during parsing. Do you want to continue anyway?"
@@ -121,6 +143,12 @@ class GenerateCommand extends BaseCommand
             'Directory the clone command output its content into.'
             . ' Additional content will be added here including the changelog chunk.',
             './'
+        );
+        $this->addOption(
+            'flush',
+            'f',
+            InputOption::VALUE_NONE,
+            'Flushes parser cache. Useful when developing this tool or after running <info>clone</info> again.'
         );
         // @TODO "--only" like module standardiser
         // @TODO "--exclude" like module standardiser
@@ -179,6 +207,7 @@ class GenerateCommand extends BaseCommand
     private function parseModules(string $dataDir): Project
     {
         $this->output->writeln('Parsing modules...');
+
         $collection = new RecipeVersionCollection($this->supportedModules, $dataDir);
         $store = new JsonStore();
         $project = new Project(
@@ -277,8 +306,8 @@ class GenerateCommand extends BaseCommand
         // @TODO ask before overriding existing data
 
         // @TODO maybe this comes as its own step? Or only one of these written like this, and the other written only as a real changelog blob?
-        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_ACTIONS), json_encode($actions, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_CHANGES), json_encode($changes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_ACTIONS), $this->jsonEncode($actions));
+        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_CHANGES), $this->jsonEncode($changes));
         $this->output->writeln('Comparison complete.');
     }
 
@@ -319,5 +348,10 @@ class GenerateCommand extends BaseCommand
         }
 
         return $json;
+    }
+
+    private function jsonEncode(mixed $content): string
+    {
+        return json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 }
