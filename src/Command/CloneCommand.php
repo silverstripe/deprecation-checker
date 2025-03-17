@@ -8,6 +8,7 @@ use Packagist\Api\Client as PackagistClient;
 use Packagist\Api\PackageNotFoundException;
 use Packagist\Api\Result\Package;
 use RuntimeException;
+use Silverstripe\DeprecationChangelogGenerator\Data\CodeComparer;
 use SilverStripe\SupportedModules\MetaData;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Exception\InvalidOptionException;
@@ -21,9 +22,7 @@ use Symfony\Component\Filesystem\Path;
 #[AsCommand('clone', 'Clone the data needed to generate the changelog chunk. Uses the host\'s <info>composer</info> binary.')]
 class CloneCommand extends BaseCommand
 {
-    public const string DIR_FROM = 'cloned/from';
-
-    public const string DIR_TO = 'cloned/to';
+    public const string DIR_CLONE = 'cloned';
 
     public const string META_FILE = 'changelog-gen-metadata.json';
 
@@ -106,11 +105,11 @@ class CloneCommand extends BaseCommand
     private function clone(string $recipe, string $outputDir): void
     {
         $fromConstraint = $this->input->getArgument('fromConstraint');
-        $fromDir = Path::join($outputDir, CloneCommand::DIR_FROM);
+        $fromDir = Path::join($outputDir, CloneCommand::DIR_CLONE, CodeComparer::FROM);
         $this->cloneForConstraint($recipe, $fromConstraint, $fromDir);
 
         $toConstraint = $this->input->getArgument('toConstraint');
-        $toDir = Path::join($outputDir, CloneCommand::DIR_TO);
+        $toDir = Path::join($outputDir, CloneCommand::DIR_CLONE, CodeComparer::TO);
         $this->cloneForConstraint($recipe, $toConstraint, $toDir);
     }
 

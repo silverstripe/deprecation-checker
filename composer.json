@@ -7,13 +7,14 @@
     },
     "require": {
         "php": "^8.3",
-        "symfony/console": "^7.2",
+        "code-lts/doctum": "^5.5",
         "composer-runtime-api": "*",
-        "knplabs/packagist-api": "^2.1",
         "composer/semver": "^3.4",
-        "symfony/filesystem": "^7.2",
-        "symfony/process": "^7.2",
+        "knplabs/packagist-api": "^2.1",
+        "nikic/php-parser": "^4.19",
         "silverstripe/supported-modules": "^1.1",
-        "nikic/php-parser": "^5.4"
+        "symfony/console": "^6.4",
+        "symfony/filesystem": "^6.4",
+        "symfony/process": "^6.4"
     }
 }

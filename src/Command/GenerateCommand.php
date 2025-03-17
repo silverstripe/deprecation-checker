@@ -3,18 +3,31 @@
 namespace Silverstripe\DeprecationChangelogGenerator\Command;
 
 use Composer\Semver\VersionParser;
+use Doctum\Message;
+use Doctum\Parser\ClassVisitor\InheritdocClassVisitor;
+use Doctum\Parser\ClassVisitor\MethodClassVisitor;
+use Doctum\Parser\ClassVisitor\PropertyClassVisitor;
+use Doctum\Parser\CodeParser;
+use Doctum\Parser\DocBlockParser;
+use Doctum\Parser\Filter\DefaultFilter;
+use Doctum\Parser\NodeVisitor;
+use Doctum\Parser\ParseError;
+use Doctum\Parser\Parser;
+use Doctum\Parser\ParserContext;
+use Doctum\Parser\ProjectTraverser;
+use Doctum\Parser\Transaction;
+use Doctum\Project;
+use Doctum\Reflection\ClassReflection;
+use Doctum\Store\JsonStore;
+use Doctum\Version\Version;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
-use PhpParser\NodeVisitor\ParentConnectingVisitor;
-use PhpParser\Parser;
 use PhpParser\ParserFactory;
-use PhpParser\PhpVersion;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use RecursiveRegexIterator;
-use RegexIterator;
+use PhpParser\PrettyPrinter\Standard as PrettyPrinter;
 use RuntimeException;
-use Silverstripe\DeprecationChangelogGenerator\PhpParser\DeprecationNodeVisitor;
+use Silverstripe\DeprecationChangelogGenerator\Data\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Data\RecipeFinder;
+use Silverstripe\DeprecationChangelogGenerator\Data\RecipeVersionCollection;
 use SilverStripe\SupportedModules\BranchLogic;
 use SilverStripe\SupportedModules\MetaData;
 use stdClass;
@@ -41,9 +54,15 @@ class GenerateCommand extends BaseCommand
 
     private array $supportedModules;
 
+    /**
+     * @var ParseError[]
+     */
+    private array $parseErrors = [];
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->setIO($input, $output);
+        $warnings = [];
 
         // Get the data dir and convert it an absolute path
         $dataDir = $this->input->getOption('dir');
@@ -54,10 +73,35 @@ class GenerateCommand extends BaseCommand
 
         $this->fetchMetaData($dataDir);
         $this->findSupportedModules();
-        $this->findInfoAboutDeprecations();
+        $parsed = $this->parseModules($dataDir);
+
+        if (!empty($this->parseErrors)) {
+            // @TODO dump these to a file somewhere too
+            $parseErrorFile = 'TODO: Create a file';
+            $countParseErrors = count($this->parseErrors);
+            $continue = $this->output->confirm(
+                "Found $countParseErrors errors during parsing. Do you want to continue anyway?"
+            );
+            $parseErrorMsg = "$countParseErrors parsing errors found. See '{$parseErrorFile}' for details.";
+            $warnings[] = $parseErrorMsg;
+            if (!$continue) {
+                $this->output->error($parseErrorMsg);
+                return BaseCommand::FAILURE;
+            }
+        }
+
+        $this->findInfoAboutDeprecations($parsed);
         // @TODO separate method for generating the changelog chunk
 
+        // Output any
+        if (!empty($warnings)) {
+            foreach ($warnings as $message) {
+                $this->output->warning($message);
+            }
+        }
+
         // @TODO if there is anything logged that needs actioning e.g. stuff that needs to be deprecated,
+
         // output a message including path to the file(s) to check.
         $this->output->success("Changelog chunk generated successfully.");
         return BaseCommand::SUCCESS;
@@ -86,23 +130,21 @@ class GenerateCommand extends BaseCommand
         $this->output->writeln('Collating metadata about the recipe in its two branches.');
         // check for presence of the clone dirs
         if (
-            !is_dir(Path::join($dataDir, CloneCommand::DIR_FROM))
-            || !is_dir(Path::join($dataDir, CloneCommand::DIR_TO))
+            !is_dir(Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::FROM))
+            || !is_dir(Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::TO))
         ) {
             throw new InvalidOptionException(
                 "'$dataDir' is missing one or both of the cloned directories. Run the clone command."
             );
         }
 
-        $fromFile = Path::join($dataDir, CloneCommand::DIR_FROM, CloneCommand::META_FILE);
-        $toFile = Path::join($dataDir, CloneCommand::DIR_TO, CloneCommand::META_FILE);
+        $fromFile = Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::FROM, CloneCommand::META_FILE);
+        $toFile = Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::TO, CloneCommand::META_FILE);
 
         $this->metaDataFrom = $this->getJsonFromFile($fromFile);
         $this->metaDataTo = $this->getJsonFromFile($toFile);
         $this->metaDataFrom['branch'] = $this->guessBranchFromConstraint($this->metaDataFrom['constraint']);
         $this->metaDataTo['branch'] = $this->guessBranchFromConstraint($this->metaDataTo['constraint']);
-        $this->metaDataFrom['phpVersion'] = $this->getPhpVersion($this->metaDataFrom['path']);
-        $this->metaDataTo['phpVersion'] = $this->getPhpVersion($this->metaDataTo['path']);
     }
 
     private function findSupportedModules(): void
@@ -129,76 +171,96 @@ class GenerateCommand extends BaseCommand
         );
     }
 
-    private function getPhpVersion(string $recipePath)
+    private function parseModules(string $dataDir): Project
     {
-        $composerJson = $this->getJsonFromFile(Path::join($recipePath, 'composer.json'), true);
-        $phpConstraint = $composerJson['require']['php'] ?? '';
-        if (!$phpConstraint) {
-            $this->output->warning('PHP version not listed for , using host version instead.');
-            return substr(phpversion(), 0, 3);
-        }
-        $versionParser = new VersionParser();
-        $phpConstraint = $versionParser->parseConstraints($phpConstraint);
-        $phpVersion = $phpConstraint->getLowerBound()->getVersion();
-        return substr($phpVersion, 0, 3);
+        $this->output->writeln('Parsing modules...');
+        $collection = new RecipeVersionCollection($this->supportedModules, $dataDir);
+        $store = new JsonStore();
+        $project = new Project(
+            $store,
+            $collection,
+            [
+                // build_dir shouldn't anything in it - but I'm setting it so that if it DOES output something we'll know.
+                'build_dir' => Path::join($dataDir, 'doctum-output/%version%'),
+                'cache_dir' => Path::join($dataDir, 'cache/parser/%version%'),
+                'include_parent_data' => true,
+            ]
+        );
+        $iterator = new RecipeFinder($collection);
+        $iterator
+            ->files()
+            ->name('*.php')
+            ->exclude('thirdparty')
+            // ->exclude('examples') // @TODO I don't think that dir exists anywhere.
+            ->exclude('tests');
+
+        $parserContext = new ParserContext(new DefaultFilter(), new DocBlockParser(), new PrettyPrinter()); // @TODO api.silverstripe.org replaces filter with our own which manages public API definition
+        $traverser = new NodeTraverser();
+        $traverser->addVisitor(new NameResolver());
+        $traverser->addVisitor(new NodeVisitor($parserContext));
+
+        // @TODO find the lowest common PHP version between versions
+        $phpParser = (new ParserFactory())->create(ParserFactory::PREFER_PHP7);
+        $codeParser = new CodeParser($parserContext, $phpParser, $traverser); // @TODO use PHP version detection per recipe version
+
+        $visitors = [
+            new InheritdocClassVisitor(),
+            new MethodClassVisitor(),
+            new PropertyClassVisitor($parserContext),
+            // @TODO api.silverstripe.org has a node visitor for collecting configs
+        ];
+        $projectTraverser = new ProjectTraverser($visitors);
+        $parser = new Parser($iterator, $store, $codeParser, $projectTraverser);
+        $project->setParser($parser);
+        // @TODO can use callback arg to output current step
+        // @TODO check what the $force bool does and if we need that
+        $project->parse(function (string $messageType, mixed $data) {
+            // @TODO Probably use a progress bar when not in verbose mode.
+            //       Also check out Doctum\Console\Command\Command::messageCallback()
+            switch ($messageType) {
+                case Message::SWITCH_VERSION:
+                    /** @var Version $data */
+                    $this->output->writeln("Swapping to '{$data->getName()}'", OutputInterface::VERBOSITY_VERBOSE);
+                    break;
+                case Message::PARSE_CLASS:
+                    /**
+                     * @var int $step
+                     * @var int $steps
+                     * @var ClassReflection $class
+                     */
+                    list($step, $steps, $class) = $data;
+                    // @TODO can DEFINITELY use this for a progress bar - we even know how many steps there are.
+                    $this->output->writeln("Step {$step}/{$steps} - parsing '{$class->getName()}'", OutputInterface::VERBOSITY_VERBOSE);
+                    break;
+                case Message::PARSE_ERROR:
+                    // Note the error for later
+                    /** @var ParseError[] $data */
+                    $this->parseErrors = array_merge($this->parseErrors, $data);
+                    // If in debug mode, output the message now.
+                    $errorMessages = [];
+                    foreach ($data as $error) {
+                        if (!$error->canBeIgnored()) {
+                            $errorMessages[] = "<fg=black;bg=yellow>Parse error in {$error->getFile()}:{$error->getLine()} - {$error->getMessage()}</>";
+                        }
+                    }
+                    $this->output->writeln($errorMessages, OutputInterface::VERBOSITY_DEBUG);
+                    break;
+                case Message::PARSE_VERSION_FINISHED:
+                    /** @var Transaction $data */
+                    // @TODO Would be a good point to STOP the progress bar maybe
+                    // @TODO can say modified x, removed y, visited z
+                    $this->output->writeln('Finished parsing that version.', OutputInterface::VERBOSITY_VERBOSE);
+                    break;
+            }
+        });
+
+        return $project;
     }
 
-    private function findInfoAboutDeprecations(): void
+    private function findInfoAboutDeprecations(Project $parsedProject): void
     {
-        $this->output->writeln('Gathering data');
-
-        foreach ($this->supportedModules as $repoData) {
-            $this->output->writeln("Gathering data for {$repoData['packagist']}");
-            $moduleFromDir = Path::join($this->metaDataFrom['path'], 'vendor', $repoData['packagist']);
-            $moduleToDir = Path::join($this->metaDataTo['path'], 'vendor', $repoData['packagist']);
-            foreach (GenerateCommand::SRC_DIRS as $srcDir) {
-                $srcDirPath = Path::join($moduleToDir, $srcDir);
-                if (!is_dir($srcDirPath)) {
-                    $this->output->writeln("$srcDirPath doesn't exist. Skipping.", OutputInterface::VERBOSITY_VERBOSE);
-                    continue;
-                }
-                $this->output->writeln("Gathering data from $srcDirPath", OutputInterface::VERBOSITY_VERBOSE);
-
-                // Recursively iterates over the directory and subdirectories only returning files ending with ".php"
-                $iterator = new RegexIterator(
-                    new RecursiveIteratorIterator(
-                        new RecursiveDirectoryIterator(
-                            $srcDirPath,
-                            // Note that RecursiveDirectoryIterator::CURRENT_AS_PATHNAME guves an array
-                            // rather than a string, so we use KEY_AS_PATHNAME to key the string we want.
-                            RecursiveDirectoryIterator::SKIP_DOTS | RecursiveDirectoryIterator::KEY_AS_PATHNAME
-                        )
-                    ),
-                    '/^.+\.php$/i',
-                    RecursiveRegexIterator::ALL_MATCHES
-                );
-                foreach ($iterator as $filePath => $finfo) {
-                    $fromCandidateFile = $this->findCandidateSrcFile(
-                        str_replace($this->metaDataFrom['path'], $this->metaDataTo['path'], $filePath),
-                        $srcDir
-                    );
-                    // $this->parseFile($filePath, $this->metaDataTo['phpVersion']);
-                }
-                return;
-            }
-        }
-    }
-
-    private function findCandidateSrcFile(string $dir, string $origSrcDir): string
-    {
-        if (is_file($dir)) {
-            return $dir;
-        }
-        foreach (GenerateCommand::SRC_DIRS as $srcDir) {
-            if ($srcDir === $origSrcDir) {
-                continue;
-            }
-            $candidate = str_replace($origSrcDir, $srcDir, $dir);
-            if (is_file($candidate)) {
-                return $candidate;
-            }
-        }
-        return '';
+        $comparer = new CodeComparer($parsedProject, $this->output);
+        $comparer->compare();
     }
 
     /**
