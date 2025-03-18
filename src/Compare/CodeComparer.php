@@ -1,6 +1,6 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Data;
+namespace Silverstripe\DeprecationChangelogGenerator\Compare;
 
 use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
@@ -51,7 +51,7 @@ class CodeComparer
     public function __construct(Project $project, OutputInterface $output)
     {
         $this->project = $project;
-        $this->output = $output; // @TODO dunno if we need that
+        $this->output = $output; // @TODO decide whether to provide some verbose output
     }
 
     public function getBreakingChanges(): array
@@ -75,7 +75,7 @@ class CodeComparer
         // @TODO is there a way to get the global consts?
         //       We'd want to check for any consts that went missing or were deprecated and not removed, etc
 
-        // Compare global functions that are introduced in Silverstripe CMS code
+        // Compare global functions that are provided in Silverstripe CMS code
         $functionsTo = $toProject->getProjectFunctions();
         foreach ($fromProject->getProjectFunctions() as $index => $functionInfo) {
             // Note the index of this array isn't the function name, unlike with classes and interfaces.
@@ -85,16 +85,16 @@ class CodeComparer
         // Free up some memory
         unset($functionsTo);
 
-        // Compare classes and traits that are introduced in Silverstripe CMS code
+        // Compare classes and traits that are provided in Silverstripe CMS code
         $classesTo = $toProject->getProjectClasses();
         /** @var ClassReflection $classInfo */
-        foreach ($fromProject->getProjectClasses() as $className => $classInfo) { // @TODO does this include enum and trait?
+        foreach ($fromProject->getProjectClasses() as $className => $classInfo) {
             $this->checkClass($className, $classInfo, $classesTo[$className] ?? null);
         }
         // Free up some memory
         unset($classesTo);
 
-        // Compare interfaces that are introduced in Silverstripe CMS code
+        // Compare interfaces that are provided in Silverstripe CMS code
         $interfacesTo = $toProject->getProjectInterfaces();
         /** @var ClassReflection $interfaceInfo */
         foreach ($fromProject->getProjectInterfaces() as $interfaceName => $interfaceInfo) {
@@ -104,12 +104,7 @@ class CodeComparer
         unset($interfacesTo);
 
         /**
-         * Still TODO possibly (depending on how Doctum does its shit)
-         * 1. For anything missing, check if the superclass has it (NOTE this will have to be a separate future step??)
-         *   - If it had it in the past OR has it now, don't note it for the subclass.
-         *   - If it didn't have it in both places, DO note it for the subclass.
-         * 1. For anything missing, make sure only the super-est class that defines it has a notice in the changelog
-         * 1. Also consider: Iterate over $toProject first and check for NEWLY deprecated code (including new code immediately deprecated)
+         * @TODO Consider iterating over $toProject now and check for NEWLY deprecated code (including new code immediately deprecated)
          */
     }
 
@@ -236,7 +231,7 @@ class CodeComparer
         // Compare consts that have the same name in both versions or removed in the new one
         foreach ($constsFrom as $constName => $const) {
             if ($const->getClass()?->getName() !== $className) {
-                continue; // @TODO does this include overridden methods?
+                continue;
             }
             $this->checkConstant($constName, $const, $constsTo[$constName] ?? null, $module);
         }
@@ -297,7 +292,7 @@ class CodeComparer
         // Compare properties that have the same name in both versions or removed in the new one
         foreach ($propertiesFrom as $propertyName => $property) {
             if ($property->getClass()?->getName() !== $className) {
-                continue; // @TODO does this include overridden methods?
+                continue;
             }
             $this->checkProperty($propertyName, $property, $propertiesTo[$propertyName] ?? null, $module);
         }
@@ -367,7 +362,7 @@ class CodeComparer
         // Compare methods that have the same name in both versions or removed in the new one
         foreach ($methodsFrom as $methodName => $method) {
             if ($method->getClass()?->getName() !== $className) {
-                continue; // @TODO does this include overridden methods?
+                continue;
             }
             $this->checkMethod($methodName, $method, $methodsTo[$methodName] ?? null, $module);
         }

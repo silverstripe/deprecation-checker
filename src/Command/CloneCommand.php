@@ -8,7 +8,7 @@ use Packagist\Api\Client as PackagistClient;
 use Packagist\Api\PackageNotFoundException;
 use Packagist\Api\Result\Package;
 use RuntimeException;
-use Silverstripe\DeprecationChangelogGenerator\Data\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Compare\CodeComparer;
 use SilverStripe\SupportedModules\MetaData;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Exception\InvalidOptionException;

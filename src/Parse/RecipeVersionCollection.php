@@ -1,10 +1,11 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Data;
+namespace Silverstripe\DeprecationChangelogGenerator\Parse;
 
 use Doctum\Version\Version;
 use Doctum\Version\VersionCollection;
 use Silverstripe\DeprecationChangelogGenerator\Command\CloneCommand;
+use Silverstripe\DeprecationChangelogGenerator\Compare\CodeComparer;
 use Symfony\Component\Filesystem\Path;
 
 /**
@@ -18,7 +19,7 @@ class RecipeVersionCollection extends VersionCollection
 
     private string $basePath;
 
-    public function __construct(array $supportedModules, string $basePath)
+    public function __construct(array $supportedModules, string $basePath, string $baseRecipe)
     {
         parent::__construct([CodeComparer::FROM, CodeComparer::TO]);
         $this->version = $this->versions[0];
@@ -27,7 +28,7 @@ class RecipeVersionCollection extends VersionCollection
             if ($moduleData['type'] === 'theme') {
                 continue;
             }
-            if ($moduleData['packagist'] === 'silverstripe/recipe-kitchen-sink') {// @TODO use the name of the recipe we're caring about not sink hardcoded.
+            if ($moduleData['packagist'] === $baseRecipe) {
                 // @TODO This is a bit ugly having to just ignore it entirely... can we do something else instead?
                 continue;
             }

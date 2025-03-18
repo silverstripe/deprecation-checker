@@ -25,11 +25,11 @@ use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard as PrettyPrinter;
 use RuntimeException;
-use Silverstripe\DeprecationChangelogGenerator\Data\CodeComparer;
-use Silverstripe\DeprecationChangelogGenerator\Data\DocBlockParser;
-use Silverstripe\DeprecationChangelogGenerator\Data\IncludeConfigFilter;
-use Silverstripe\DeprecationChangelogGenerator\Data\RecipeFinder;
-use Silverstripe\DeprecationChangelogGenerator\Data\RecipeVersionCollection;
+use Silverstripe\DeprecationChangelogGenerator\Compare\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Parse\DocBlockParser;
+use Silverstripe\DeprecationChangelogGenerator\Parse\IncludeConfigFilter;
+use Silverstripe\DeprecationChangelogGenerator\Parse\RecipeFinder;
+use Silverstripe\DeprecationChangelogGenerator\Parse\RecipeVersionCollection;
 use SilverStripe\SupportedModules\BranchLogic;
 use SilverStripe\SupportedModules\MetaData;
 use stdClass;
@@ -211,7 +211,7 @@ class GenerateCommand extends BaseCommand
     {
         $this->output->writeln('Parsing modules...');
 
-        $collection = new RecipeVersionCollection($this->supportedModules, $dataDir);
+        $collection = new RecipeVersionCollection($this->supportedModules, $dataDir, $this->metaDataFrom['recipe']);
         $store = new JsonStore();
         $project = new Project(
             $store,
@@ -243,7 +243,6 @@ class GenerateCommand extends BaseCommand
             new InheritdocClassVisitor(),
             new MethodClassVisitor(),
             new PropertyClassVisitor($parserContext),
-            // @TODO api.silverstripe.org has a node visitor for collecting configs
         ];
         $projectTraverser = new ProjectTraverser($visitors);
         $parser = new Parser($iterator, $store, $codeParser, $projectTraverser);
@@ -333,7 +332,6 @@ class GenerateCommand extends BaseCommand
 
         $filesystem = new Filesystem();
         $filesystem->mkdir($outputDir);
-        // @TODO ask before overriding existing data?
 
         // Dump findings into files so we can check them at any time
         $filesystem->dumpFile(
@@ -375,8 +373,6 @@ class GenerateCommand extends BaseCommand
             'function' => [],
             'param' => [],
         ];
-        // @TODO arguably everything should be in this order already as part of the comparison logic
-        //       but it doesn't NEED to be in this order until now, so not sure whether to leave it or change it.
         foreach ($this->breakingApiChanges as $module => $moduleChanges) {
             // Set the order for different change types to display
             $sortedChanges[$module] = [

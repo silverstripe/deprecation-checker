@@ -1,6 +1,6 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Data;
+namespace Silverstripe\DeprecationChangelogGenerator\Parse;
 
 use Doctum\Parser\DocBlockParser as BaseParser;
 use phpDocumentor\Reflection\DocBlock\Tag;
