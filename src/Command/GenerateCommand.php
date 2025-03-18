@@ -19,6 +19,8 @@ use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
 use Doctum\Store\JsonStore;
 use Doctum\Version\Version;
+use InvalidArgumentException;
+use LogicException;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
@@ -38,16 +40,15 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
+use Twig\Environment;
+use Twig\Loader\FilesystemLoader;
 
 #[AsCommand('generate', 'Generate the deprecation section of a changelog')]
 class GenerateCommand extends BaseCommand
 {
-    private const array SRC_DIRS = [
-        'code',
-        'src',
-    ];
-
     public const string DIR_OUTPUT = 'output';
+
+    public const string FILE_CHANGELOG = 'changelog.md';
 
     public const string FILE_ACTIONS = 'actions-required.json';
 
@@ -112,23 +113,27 @@ class GenerateCommand extends BaseCommand
         $this->findInfoAboutDeprecations($parsed, $dataDir);
         if (!empty($this->actionsToTake)) {
             $numActions = $this->getActionsCount();
-            $actionsFile = Path::join($dataDir, GenerateCommand::FILE_ACTIONS);
+            $actionsFile = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_ACTIONS);
             $warnings[] = "$numActions actions to take. See '{$actionsFile}' for details.";
         }
 
-        // @TODO separate method for generating the changelog chunk
-
-        // Output any
+        // Output any warnings
         if (!empty($warnings)) {
             foreach ($warnings as $message) {
                 $this->output->warning($message);
             }
         }
 
-        // @TODO if there is anything logged that needs actioning e.g. stuff that needs to be deprecated,
+        if (count($this->breakingApiChanges) < 1) {
+            $this->output->success('No API breaking changes to add to the changelog.');
+            return BaseCommand::SUCCESS;
+        }
+
+        $changelogPath = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_CHANGELOG);
+        $this->renderChangelogChunk($dataDir, $changelogPath, $parsed);
 
         // output a message including path to the file(s) to check.
-        $this->output->success("Changelog chunk generated successfully.");
+        $this->output->success("Changelog chunk generated successfully. See '$changelogPath'");
         return BaseCommand::SUCCESS;
     }
 
@@ -146,7 +151,7 @@ class GenerateCommand extends BaseCommand
             'flush',
             'f',
             InputOption::VALUE_NONE,
-            'Flushes parser cache. Useful when developing this tool or after running <info>clone</info> again.'
+            'Flushes parser and twig cache. Useful when developing this tool or after running <info>clone</info> again.'
         );
         // @TODO "--only" like module standardiser
         // @TODO "--exclude" like module standardiser
@@ -185,7 +190,7 @@ class GenerateCommand extends BaseCommand
         $cmsMajorFrom = $this->getCmsMajor($this->metaDataFrom);
         $cmsMajorTo = $this->getCmsMajor($this->metaDataTo);
         // Make sure we only have supported modules that are in BOTH major releases
-        $supportedModules = MetaData::removeReposNotInCmsMajor($supportedModules, $cmsMajorFrom, true);
+        // $supportedModules = MetaData::removeReposNotInCmsMajor($supportedModules, $cmsMajorFrom, true);
         $supportedModules = MetaData::removeReposNotInCmsMajor($supportedModules, $cmsMajorTo, true);
         $this->supportedModules = $supportedModules;
     }
@@ -286,6 +291,7 @@ class GenerateCommand extends BaseCommand
                     break;
             }
         });
+        $this->parseErrors = array_merge($this->parseErrors, $iterator->getProblems());
 
         $this->output->writeln('Parsing complete.');
         return $project;
@@ -340,6 +346,233 @@ class GenerateCommand extends BaseCommand
             $this->jsonEncode($this->breakingApiChanges)
         );
         $this->output->writeln('Comparison complete.');
+    }
+
+    private function renderChangelogChunk(string $dataDir, string $filePath, Project $parsedProject)
+    {
+        $parsedProject->switchVersion(new Version(CodeComparer::TO));
+        $data = [
+            'fromVersion' => $this->metaDataFrom['branch'],
+            'toVersion' => $this->metaDataTo['branch'],
+            'apiChanges' => $this->getFormattedApiChanges($parsedProject),
+        ];
+        $loader = new FilesystemLoader(Path::join(__DIR__, '../../templates'));
+        $cacheDir = Path::join($dataDir, 'cache/twig');
+        $twig = new Environment($loader, ['cache' => $cacheDir, 'auto_reload' => true, 'autoescape' => false]);
+        $content = $twig->render('changelog.md.twig', $data);
+        file_put_contents($filePath, $content);
+    }
+
+    private function getFormattedApiChanges(Project $parsedProject): array
+    {
+        $sortedChanges = [];
+        // Set the order for different API types to display
+        $apiTypeOrder = [
+            'class' => [],
+            'method' => [],
+            'config' => [],
+            'property' => [],
+            'const' => [],
+            'function' => [],
+            'param' => [],
+        ];
+        // @TODO arguably everything should be in this order already as part of the comparison logic
+        //       but it doesn't NEED to be in this order until now, so not sure whether to leave it or change it.
+        foreach ($this->breakingApiChanges as $module => $moduleChanges) {
+            // Set the order for different change types to display
+            $sortedChanges[$module] = [
+                'removed' => $apiTypeOrder,
+                'internal' => $apiTypeOrder,
+                'visibility' => $apiTypeOrder,
+                'returnType' => $apiTypeOrder,
+                'type' => $apiTypeOrder,
+                'abstract' => $apiTypeOrder,
+                'final' => $apiTypeOrder,
+                'new' => $apiTypeOrder, // params only
+                'returnByRef' => $apiTypeOrder,
+                'passByRef' => $apiTypeOrder,
+                'variadic' => $apiTypeOrder,
+                'default' => $apiTypeOrder,
+            ];
+            foreach ($moduleChanges as $changeType => $typeChanges) {
+                foreach ($typeChanges as $apiType => $apiChanges) {
+                    foreach ($apiChanges as $apiName => $apiData) {
+                        $message = $this->getMessageForChange($changeType, $apiType, $apiName, $apiData, $parsedProject);
+                        $sortedChanges[$module][$changeType][$apiType][$apiName] = $message;
+                    }
+                    // asort over ksort because we want the FQCN of the API to be the sort order, not just e.g. the method name on its own.
+                    asort($sortedChanges[$module][$changeType][$apiType]);
+                }
+            }
+        }
+        ksort($sortedChanges);
+        // Now that everything's in the right order, flatted down so we have one array of messages per module.
+        $formattedChanges = [];
+        foreach ($sortedChanges as $module => $moduleChanges) {
+            foreach ($moduleChanges as $changeType => $typeChanges) {
+                foreach ($typeChanges as $apiType => $apiChanges) {
+                    foreach ($apiChanges as $apiName => $message) {
+                        $formattedChanges[$module][] = $message;
+                    }
+                }
+            }
+        }
+        return $formattedChanges;
+    }
+
+    private function getMessageForChange(string $changeType, string $apiType, string $apiName, array $apiData, Project $parsedProject): string
+    {
+        $apiTypeForMessage = $apiData['apiType'];
+        $apiReference = $this->getApiReference($apiType, $apiName, $apiData, $changeType);
+        $deprecationMessage = $apiData['message'] ?? null;
+        $from = $this->normaliseChangedValue($apiData[CodeComparer::FROM] ?? null, $changeType);
+        $to = $this->normaliseChangedValue($apiData[CodeComparer::TO] ?? null, $changeType);
+        $overriddenOrSubclassed = $apiType === 'class' ? 'subclassed' : 'overridden';
+
+        // Make the message
+        $message = match ($changeType) {
+            'abstract' => ucfirst($apiTypeForMessage) . " $apiReference is now abstract",
+            'internal' => ucfirst($apiTypeForMessage) . " $apiReference is now internal and should not be used",
+            'default' => "Changed default value for $apiTypeForMessage $apiReference from $from to $to",
+            'final' => ucfirst($apiTypeForMessage) . " $apiReference is now final and cannot be $overriddenOrSubclassed",
+            'new' => "Added new $apiTypeForMessage $apiReference",
+            'passByRef' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' passed by reference',
+            'removed' => "Removed deprecated $apiTypeForMessage $apiReference",
+            'returnByRef' => ucfirst($apiTypeForMessage) . " $apiReference " . ($apiData['isNow'] ? 'now' : 'no longer') . ' returns its value by reference',
+            'returnType' => "Changed return type for $apiTypeForMessage $apiReference from $from to $to",
+            'type' => "Changed type of $apiTypeForMessage $apiReference from $from to $to",
+            'variadic' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' variadic',
+            'visibility' => "Changed visibility for $apiTypeForMessage $apiReference from $from to $to",
+        };
+
+        // Add deprecation message if appropriate and available
+        if (($changeType === 'removed' || $changeType === 'internal') && $deprecationMessage) {
+            $deprecationMessage = lcfirst(trim(preg_replace('/^(will be)/i', '', $deprecationMessage)));
+            // Regex uses example from https://www.php.net/manual/en/language.oop5.basic.php#language.oop5.basic.class
+            // Captures any FQCN-looking string, plus optional const/method/property/config tacked on the end.
+            // Note the quadrupal \\\\ is a regex match for a single \
+            $apiRegex = '/(?<class>[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\\\\[^\s`:."\'-]*)(?<rest>(?:\.|::|->)[a-zA-Z0-9_-]+(?:\(\))?)?/';
+            $deprecationMessage = preg_replace_callback(
+                $apiRegex,
+                function(array $match) use ($parsedProject) {
+                    $class = $match['class'];
+                    if ($class === 'Symfony\Component\HttpFoundation\IpUtils') {
+                        echo '';
+                    }
+                    $classReflection = $parsedProject->getClass($class);
+                    // If that class doesn't exist (e.g. symfony class) just backtick the full reference.
+                    if (!$classReflection || $classReflection->getFile() === null) {
+                        return "`{$match[0]}`";
+                    }
+                    // Get the API reference
+                    $rest = $match['rest'] ?? null;
+                    if ($rest) {
+                        if (preg_match('/^::(.*)\(\)$/', $rest, $restMatch)) {
+                            return $this->getApiReference('method', $restMatch[1], ['class' => $class]);
+                        } elseif (preg_match('/^::(.*)$/', $rest, $restMatch)) {
+                            return $this->getApiReference('const', $restMatch[1], ['class' => $class]);
+                        } elseif (preg_match('/^.(.*)/', $rest, $restMatch)) {
+                            return $this->getApiReference('config', $restMatch[1], ['class' => $class]);
+                        } elseif (preg_match('/^->(.*)/', $rest, $restMatch)) {
+                            return $this->getApiReference('property', $restMatch[1], ['class' => $class]);
+                        } else {
+                            throw new LogicException("Unexpected API reference in deprecation notice: '{$match[0]}'");
+                        }
+                    }
+                    return $this->getApiReference('class', $class);
+                },
+                $deprecationMessage
+            );
+            $message .= " - $deprecationMessage";
+        }
+
+        return $message;
+    }
+
+    /**
+     * Get a documentation markdown friendly string to reference a specific piece of API
+     */
+    private function getApiReference(string $apiType, string $apiName, array $apiData = [], string $changeType = ''): string
+    {
+        if ($apiType === 'class') {
+            if ($changeType === 'removed') {
+                return "`{$apiName}`";
+            }
+            $shortName = $this->getShortClassName($apiName);
+            return "[`{$shortName}`](api:{$apiName})";
+        }
+        if ($apiType === 'method') {
+            $className = $apiData['class'];
+            if ($changeType === 'removed') {
+                return "`{$className}::{$apiName}()`";
+            }
+            $shortName = $this->getShortClassName($className);
+            return "[`{$shortName}::{$apiName}()`](api:{$className}::{$apiName}())";
+        }
+        if ($apiType === 'property') {
+            $className = $apiData['class'];
+            if ($changeType === 'removed') {
+                return "`{$className}->{$apiName}`";
+            }
+            $shortName = $this->getShortClassName($className);
+            return "[`{$shortName}->{$apiName}`](api:{$className}->{$apiName})";
+        }
+        if ($apiType === 'config') {
+            $className = $apiData['class'];
+            if ($changeType === 'removed') {
+                return "`{$className}.{$apiName}`";
+            }
+            $shortName = $this->getShortClassName($className);
+            return "[`{$shortName}.{$apiName}`](api:{$className}->{$apiName})";
+        }
+        if ($apiType === 'const') {
+            $className = $apiData['class'];
+            if ($changeType === 'removed') {
+                return "`{$className}::{$apiName}`";
+            }
+            $shortName = $this->getShortClassName($className);
+            return "[`{$shortName}::{$apiName}`](api:{$className}::{$apiName})";
+        }
+        if ($apiType === 'function') {
+            if ($changeType === 'removed') {
+                return "`{$apiName}()`";
+            }
+            return "[`{$apiName}()`](api:{$apiName}())";
+        }
+        if ($apiType === 'param') {
+            $function = $apiData['function'];
+            if ($function) {
+                $parent = $this->getApiReference('function', $function);
+            } else {
+                $method = $apiData['method'];
+                $class = $apiData['class'];
+                $parent = $this->getApiReference('method', $method, ['class' => $class]);
+            }
+            return "`$apiName` in $parent";
+        }
+        throw new InvalidArgumentException("Unexpected API type $apiType");
+    }
+
+    private function getShortClassName(string $className): string
+    {
+        $parts = explode('\\', $className);
+        return array_pop($parts);
+    }
+
+    private function normaliseChangedValue(?string $value, string $changeType): string
+    {
+        if ($value === null || $value === '') {
+            // Depending on the type of change, the reference is different.
+            return match ($changeType) {
+                'type' => 'dynamic',
+                'returnType' => 'dynamic',
+                'visibility' => 'undefined',
+                'default' => 'none',
+                default => '',
+            };
+        }
+        // add backticks
+        return "`$value`";
     }
 
     /**

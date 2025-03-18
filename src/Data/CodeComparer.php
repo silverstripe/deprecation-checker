@@ -135,10 +135,12 @@ class CodeComparer
         $dataFrom = [
             'file' => $fileFrom,
             'line' => $functionFrom->getLine(),
+            'apiType' => 'function',
         ];
         $dataTo = [
             'file' => $fileTo,
             'line' => $functionTo?->getLine(),
+            'apiType' => 'function',
         ];
 
         $isMissing = $this->checkForMissingApi($name, $functionFrom, $functionTo, $dataFrom, $dataTo, $module);
@@ -147,6 +149,15 @@ class CodeComparer
         }
 
         $this->checkForSignatureChanges($name, $functionFrom, $functionTo, $dataFrom, $dataTo, $module);
+
+        // Changed whether it's passed by reference (preceeded with `&`) or not
+        if ($functionFrom->isByRef() !== $functionTo->isByRef()) {
+            $type = $this->getTypeFromReflection($functionFrom);
+            $this->breakingChanges[$module]['returnByRef'][$type][$name] = [
+                ...$dataTo,
+                'isNow' => $functionTo->isByRef(),
+            ];
+        }
 
         $this->checkParameters($functionFrom->getParameters(), $functionTo->getParameters(), $module);
     }
@@ -167,6 +178,18 @@ class CodeComparer
      */
     private function checkClass(string $fqcn, ClassReflection $classFrom, ?ClassReflection $classTo)
     {
+        $apiTypeFrom = match ($classFrom->getCategoryId()) {
+            1 => 'class',
+            2 => 'interface',
+            3 => 'trait',
+        };
+        $apiTypeTo = match ($classTo?->getCategoryId()) {
+            1 => 'class',
+            2 => 'interface',
+            3 => 'trait',
+            default => null,
+        };
+
         $fileFrom = $classFrom->getFile();
         $fileTo = $classTo?->getFile();
         $module = $this->getModuleForFile($fileFrom);
@@ -174,10 +197,12 @@ class CodeComparer
         $dataFrom = [
             'file' => $fileFrom,
             'line' => $classFrom->getLine(),
+            'apiType' => $apiTypeFrom,
         ];
         $dataTo = [
             'file' => $fileTo,
             'line' => $classTo?->getLine(),
+            'apiType' => $apiTypeTo,
         ];
 
         $isMissing = $this->checkForMissingApi($fqcn, $classFrom, $classTo, $dataFrom, $dataTo, $module);
@@ -189,19 +214,9 @@ class CodeComparer
 
         // Class-like has changed what type of class-like it is (e.g. from class to interface)
         if ($classFrom->getCategoryId() !== $classTo->getCategoryId()) {
-            $typeFrom = match ($classFrom->getCategoryId()) {
-                1 => 'class',
-                2 => 'interface',
-                3 => 'trait',
-            };
-            $typeTo = match ($classTo->getCategoryId()) {
-                1 => 'class',
-                2 => 'interface',
-                3 => 'trait',
-            };
             $this->breakingChanges[$module]['type'][$type][$fqcn] = [
-                CodeComparer::FROM => $typeFrom,
-                CodeComparer::TO => $typeTo,
+                CodeComparer::FROM => $apiTypeFrom,
+                CodeComparer::TO => $apiTypeTo,
             ];
         }
 
@@ -251,6 +266,7 @@ class CodeComparer
             'file' => $fileFrom,
             'line' => $constFrom->getLine(),
             'class' => $classFrom?->getName(),
+            'apiType' => 'constant',
         ];
         /** @var ClassReflection|null $classTo */
         $classTo = $constTo?->getClass();
@@ -259,6 +275,7 @@ class CodeComparer
             'file' => $fileTo,
             'line' => $constTo?->getLine(),
             'class' => $classTo?->getName(),
+            'apiType' => 'constant',
         ];
 
         $isMissing = $this->checkForMissingApi($name, $constFrom, $constTo, $dataFrom, $dataTo, $module);
@@ -310,6 +327,7 @@ class CodeComparer
             'file' => $fileFrom,
             'line' => $propertyFrom->getLine(),
             'class' => $classFrom?->getName(),
+            'apiType' => 'property',
         ];
         /** @var ClassReflection|null $classTo */
         $classTo = $propertyTo?->getClass();
@@ -318,12 +336,15 @@ class CodeComparer
             'file' => $fileTo,
             'line' => $propertyTo?->getLine(),
             'class' => $classTo?->getName(),
+            'apiType' => 'property',
         ];
 
         $isMissing = $this->checkForMissingApi($name, $propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
         if ($isMissing) {
             return;
         }
+
+        // @TODO check config. Config also has breaking API change if its (default) value changes.
 
         $this->checkForSignatureChanges($name, $propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
     }
@@ -373,6 +394,7 @@ class CodeComparer
             'file' => $fileFrom,
             'line' => $methodFrom->getLine(),
             'class' => $classFrom?->getName(),
+            'apiType' => 'method',
         ];
         $classTo = $methodTo?->getClass();
         $fileTo = method_exists($classTo ?? '', 'getFile') ? $classTo->getFile() : null;
@@ -380,6 +402,7 @@ class CodeComparer
             'file' => $fileTo,
             'line' => $methodTo?->getLine(),
             'class' => $classTo?->getName(),
+            'apiType' => 'method',
         ];
 
         $isMissing = $this->checkForMissingApi($name, $methodFrom, $methodTo, $dataFrom, $dataTo, $module);
@@ -392,9 +415,9 @@ class CodeComparer
         // Changed whether it's passed by reference (preceeded with `&`) or not
         if ($methodFrom->isByRef() !== $methodTo->isByRef()) {
             $type = $this->getTypeFromReflection($methodFrom);
-            $this->breakingChanges[$module]['passByRef'][$type][$name] = [
+            $this->breakingChanges[$module]['returnByRef'][$type][$name] = [
                 ...$dataTo,
-                'isPassByRefNow' => $methodTo->isByRef(),
+                'isNow' => $methodTo->isByRef(),
             ];
         }
 
@@ -416,12 +439,12 @@ class CodeComparer
         $type = null;
         foreach ($newParams as $paramName => $newParam) {
             $type ??= $this->getTypeFromReflection($newParam);
-            $this->breakingChanges[$module]['new'][$type][] = [
-                'name' => $paramName,
+            $this->breakingChanges[$module]['new'][$type][$paramName] = [
                 'hint' => $newParam->getHint(),
                 'function' => $newParam->getFunction()?->getName(),
                 'method' => $newParam->getMethod()?->getName(),
                 'class' => $newParam->getClass()?->getName(),
+                'apiType' => 'parameter',
             ];
         }
     }
@@ -451,6 +474,7 @@ class CodeComparer
             'function' => $parameterFrom->getFunction()?->getName(),
             'method' => $parameterFrom->getMethod()?->getName(),
             'class' => $classFrom?->getName(),
+            'apiType' => 'parameter',
         ];
         $classTo = $parameterTo?->getMethod() ? $parameterTo?->getClass() : null;
         $fileTo = $classTo ? $classTo->getFile() : $parameterTo?->getFunction()?->getFile();
@@ -460,6 +484,7 @@ class CodeComparer
             'function' => $parameterTo?->getFunction()?->getName(),
             'method' => $parameterTo?->getMethod()?->getName(),
             'class' => $classTo?->getName(),
+            'apiType' => 'parameter',
         ];
 
         // Param has been removed (or renamed - we can't easily tell the difference)
@@ -475,7 +500,7 @@ class CodeComparer
         if ($parameterFrom->getVariadic() !== $parameterTo->getVariadic()) {
             $this->breakingChanges[$module]['variadic'][$type][$name] = [
                 ...$dataTo,
-                'isVariadicNow' => $parameterTo->getVariadic(),
+                'isNow' => $parameterTo->getVariadic(),
             ];
         }
 
@@ -483,7 +508,7 @@ class CodeComparer
         if ($parameterFrom->isByRef() !== $parameterTo->isByRef()) {
             $this->breakingChanges[$module]['passByRef'][$type][$name] = [
                 ...$dataTo,
-                'isPassByRefNow' => $parameterTo->isByRef(),
+                'isNow' => $parameterTo->isByRef(),
             ];
         }
 
@@ -580,6 +605,7 @@ class CodeComparer
         if ($hintType !== null && $reflectionFrom->getHintAsString() !== $reflectionTo->getHintAsString()) {
             $this->breakingChanges[$module][$hintType][$type][$name] = [
                 ...$dataTo,
+                // @TODO getHintAsString gives short class names, e.g. `Controller` instead of `SilverStripe\Control\Controller`
                 CodeComparer::FROM => $reflectionFrom->getHintAsString(),
                 CodeComparer::TO => $reflectionTo->getHintAsString(),
             ];

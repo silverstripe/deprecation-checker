@@ -2,9 +2,9 @@
 
 namespace Silverstripe\DeprecationChangelogGenerator\Data;
 
+use Doctum\Parser\ParseError;
 use Iterator;
 use ReflectionProperty;
-use RuntimeException;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -13,6 +13,8 @@ use Symfony\Component\Finder\Finder;
 class RecipeFinder extends Finder
 {
     private RecipeVersionCollection $collection;
+
+    private array $problems = [];
 
     public function __construct(RecipeVersionCollection $collection)
     {
@@ -30,12 +32,21 @@ class RecipeFinder extends Finder
         foreach ($packages as $package) {
             $path = $this->collection->getPackagePath($package);
             if (!$path) {
-                throw new RuntimeException("No path for $package in '{$this->collection->getVersion()}'");
+                $this->problems[] = new ParseError("No path for $package in '{$this->collection->getVersion()->getName()}'", null, null);
+                continue;
             }
             $this->in($path);
         }
 
         return parent::getIterator();
+    }
+
+    /**
+     * @return ParseError[]
+     */
+    public function getProblems(): array
+    {
+        return $this->problems;
     }
 
     /**
