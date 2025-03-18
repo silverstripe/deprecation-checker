@@ -8,7 +8,6 @@ use Doctum\Parser\ClassVisitor\InheritdocClassVisitor;
 use Doctum\Parser\ClassVisitor\MethodClassVisitor;
 use Doctum\Parser\ClassVisitor\PropertyClassVisitor;
 use Doctum\Parser\CodeParser;
-use Doctum\Parser\Filter\DefaultFilter;
 use Doctum\Parser\NodeVisitor;
 use Doctum\Parser\ParseError;
 use Doctum\Parser\Parser;
@@ -28,6 +27,7 @@ use PhpParser\PrettyPrinter\Standard as PrettyPrinter;
 use RuntimeException;
 use Silverstripe\DeprecationChangelogGenerator\Data\CodeComparer;
 use Silverstripe\DeprecationChangelogGenerator\Data\DocBlockParser;
+use Silverstripe\DeprecationChangelogGenerator\Data\IncludeConfigFilter;
 use Silverstripe\DeprecationChangelogGenerator\Data\RecipeFinder;
 use Silverstripe\DeprecationChangelogGenerator\Data\RecipeVersionCollection;
 use SilverStripe\SupportedModules\BranchLogic;
@@ -228,10 +228,9 @@ class GenerateCommand extends BaseCommand
             ->files()
             ->name('*.php')
             ->exclude('thirdparty')
-            // ->exclude('examples') // @TODO I don't think that dir exists anywhere.
             ->exclude('tests');
 
-        $parserContext = new ParserContext(new DefaultFilter(), new DocBlockParser(), new PrettyPrinter()); // @TODO api.silverstripe.org replaces filter with our own which manages public API definition
+        $parserContext = new ParserContext(new IncludeConfigFilter(), new DocBlockParser(), new PrettyPrinter());
         $traverser = new NodeTraverser();
         $traverser->addVisitor(new NameResolver());
         $traverser->addVisitor(new NodeVisitor($parserContext));
@@ -391,6 +390,7 @@ class GenerateCommand extends BaseCommand
                 'new' => $apiTypeOrder, // params only
                 'returnByRef' => $apiTypeOrder,
                 'passByRef' => $apiTypeOrder,
+                'readonly' => $apiTypeOrder,
                 'variadic' => $apiTypeOrder,
                 'default' => $apiTypeOrder,
             ];
@@ -437,6 +437,7 @@ class GenerateCommand extends BaseCommand
             'final' => ucfirst($apiTypeForMessage) . " $apiReference is now final and cannot be $overriddenOrSubclassed",
             'new' => "Added new $apiTypeForMessage $apiReference",
             'passByRef' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' passed by reference',
+            'readonly' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' read-only',
             'removed' => "Removed deprecated $apiTypeForMessage $apiReference",
             'returnByRef' => ucfirst($apiTypeForMessage) . " $apiReference " . ($apiData['isNow'] ? 'now' : 'no longer') . ' returns its value by reference',
             'returnType' => "Changed return type for $apiTypeForMessage $apiReference from $from to $to",

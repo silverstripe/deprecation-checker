@@ -320,6 +320,7 @@ class CodeComparer
         ?PropertyReflection $propertyTo,
         string $module
     ) {
+        $type = $this->getTypeFromReflection($propertyFrom);
         /** @var ClassReflection|null $classFrom */
         $classFrom = $propertyFrom->getClass();
         $fileFrom = method_exists($classFrom ?? '', 'getFile') ? $classFrom->getFile() : null;
@@ -327,7 +328,7 @@ class CodeComparer
             'file' => $fileFrom,
             'line' => $propertyFrom->getLine(),
             'class' => $classFrom?->getName(),
-            'apiType' => 'property',
+            'apiType' => ($propertyFrom->isPrivate() && $propertyFrom->isStatic()) ? 'config' : 'property',
         ];
         /** @var ClassReflection|null $classTo */
         $classTo = $propertyTo?->getClass();
@@ -336,7 +337,7 @@ class CodeComparer
             'file' => $fileTo,
             'line' => $propertyTo?->getLine(),
             'class' => $classTo?->getName(),
-            'apiType' => 'property',
+            'apiType' => ($propertyTo?->isPrivate() && $propertyTo?->isStatic()) ? 'config' : 'property',
         ];
 
         $isMissing = $this->checkForMissingApi($name, $propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
@@ -344,9 +345,14 @@ class CodeComparer
             return;
         }
 
-        // @TODO check config. Config also has breaking API change if its (default) value changes.
-
         $this->checkForSignatureChanges($name, $propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
+
+        if ($propertyFrom->isReadOnly() !== $propertyTo->isReadOnly()) {
+            $this->breakingChanges[$module]['readonly'][$type][$name] = [
+                ...$dataTo,
+                'isNow' => $propertyTo->isReadOnly(),
+            ];
+        }
     }
 
     /**
@@ -682,7 +688,7 @@ class CodeComparer
             ClassReflection::class => 'class',
             ParameterReflection::class => 'param',
             MethodReflection::class => 'method',
-            PropertyReflection::class => 'property',
+            PropertyReflection::class => ($reflection->isPrivate() && $reflection->isStatic()) ? 'config' : 'property',
             ConstantReflection::class => 'const',
             FunctionReflection::class => 'function',
             default => throw new InvalidArgumentException("Unexpected reflection type: $reflectionClass"),
