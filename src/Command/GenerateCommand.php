@@ -55,6 +55,11 @@ class GenerateCommand extends BaseCommand
 
     public const string FILE_PARSE_ERRORS = 'parse-errors.json';
 
+    /**
+     * We don't care about missing `@param` tags for our purposes.
+     */
+    private const string IGNORE_PARSE_ERROR_REGEX = '/is missing a @param tag/';
+
     private array $metaDataFrom;
 
     private array $metaDataTo;
@@ -65,6 +70,10 @@ class GenerateCommand extends BaseCommand
      * @var ParseError[]
      */
     private array $parseErrors = [];
+
+    private array $actionsToTake = [];
+
+    private array $breakingApiChanges = [];
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -79,45 +88,34 @@ class GenerateCommand extends BaseCommand
         }
 
         $parseErrorFile = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_PARSE_ERRORS);
-        $filesystem = new Filesystem();
 
         if ($this->input->getOption('flush')) {
+            $filesystem = new Filesystem();
             if ($filesystem->exists($parseErrorFile)) {
                 $filesystem->remove($parseErrorFile);
             }
             $filesystem->remove(Path::join($dataDir, 'cache'));
         }
 
+        // Get metadata so we know what we need to parse
         $this->fetchMetaData($dataDir);
         $this->findSupportedModules();
-        $parsed = $this->parseModules($dataDir);
 
-        if (!empty($this->parseErrors)) {
-            // Dump the errors so they can be dealt with
-            $parseErrors = [];
-            foreach ($this->parseErrors as $error) {
-                $parseErrors[] = [
-                    'message' => $error->getMessage(),
-                    'file' => $error->getFile(),
-                    'line' => $error->getLine(),
-                    'tip' => $error->getTip(),
-                ];
-            }
-            $filesystem->dumpFile($parseErrorFile, $this->jsonEncode($parseErrors));
-            // Prompt in case dev doesn't want to continue with these errors.
-            $countParseErrors = count($this->parseErrors);
-            $continue = $this->output->confirm(
-                "Found $countParseErrors errors during parsing. Do you want to continue anyway?"
-            );
-            $parseErrorMsg = "$countParseErrors parsing errors found. See '{$parseErrorFile}' for details.";
-            $warnings[] = $parseErrorMsg;
-            if (!$continue) {
-                $this->output->error($parseErrorMsg);
-                return BaseCommand::FAILURE;
-            }
+        // Parse PHP files in all relevant repositories
+        $parsed = $this->parseModules($dataDir);
+        $parseWarning = $this->handleParseErrors($parseErrorFile);
+        if ($parseWarning) {
+            $warnings[] = $parseWarning;
         }
 
+        // Compare versions to find breaking changes and actions needed
         $this->findInfoAboutDeprecations($parsed, $dataDir);
+        if (!empty($this->actionsToTake)) {
+            $numActions = $this->getActionsCount();
+            $actionsFile = Path::join($dataDir, GenerateCommand::FILE_ACTIONS);
+            $warnings[] = "$numActions actions to take. See '{$actionsFile}' for details.";
+        }
+
         // @TODO separate method for generating the changelog chunk
 
         // Output any
@@ -273,7 +271,8 @@ class GenerateCommand extends BaseCommand
                     // If in debug mode, output the message now.
                     $errorMessages = [];
                     foreach ($data as $error) {
-                        if (!$error->canBeIgnored()) {
+                        $errorIsRelevant = !preg_match(GenerateCommand::IGNORE_PARSE_ERROR_REGEX, $error->getMessage());
+                        if ($errorIsRelevant && !$error->canBeIgnored()) {
                             $errorMessages[] = "<fg=black;bg=yellow>Parse error in {$error->getFile()}:{$error->getLine()} - {$error->getMessage()}</>";
                         }
                     }
@@ -292,22 +291,54 @@ class GenerateCommand extends BaseCommand
         return $project;
     }
 
+    private function handleParseErrors(string $parseErrorFile): string
+    {
+        if (empty($this->parseErrors)) {
+            return '';
+        }
+        $parseErrors = [];
+        foreach ($this->parseErrors as $error) {
+            if (preg_match(GenerateCommand::IGNORE_PARSE_ERROR_REGEX, $error->getMessage())) {
+                continue;
+            }
+            $parseErrors[] = [
+                'message' => $error->getMessage(),
+                'file' => $error->getFile(),
+                'line' => $error->getLine(),
+                'tip' => $error->getTip(),
+            ];
+        }
+        if (!empty($parseErrors)) {
+            $filesystem = new Filesystem();
+            $filesystem->dumpFile($parseErrorFile, $this->jsonEncode($parseErrors));
+            $countParseErrors = count($parseErrors);
+            return "$countParseErrors parsing errors found. See '{$parseErrorFile}' for details.";
+        }
+        return '';
+    }
+
     private function findInfoAboutDeprecations(Project $parsedProject, string $dataDir): void
     {
         $this->output->writeln('Comparing API between versions...');
         $outputDir = Path::join($dataDir, GenerateCommand::DIR_OUTPUT);
         $comparer = new CodeComparer($parsedProject, $this->output);
         $comparer->compare();
-        $actions = $comparer->getActionsToTake();
-        $changes = $comparer->getBreakingChanges();
+        $this->actionsToTake = $comparer->getActionsToTake();
+        $this->breakingApiChanges = $comparer->getBreakingChanges();
 
         $filesystem = new Filesystem();
         $filesystem->mkdir($outputDir);
-        // @TODO ask before overriding existing data
+        // @TODO ask before overriding existing data?
 
-        // @TODO maybe this comes as its own step? Or only one of these written like this, and the other written only as a real changelog blob?
-        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_ACTIONS), $this->jsonEncode($actions));
-        $filesystem->dumpFile(Path::join($outputDir, GenerateCommand::FILE_CHANGES), $this->jsonEncode($changes));
+        // Dump findings into files so we can check them at any time
+        $filesystem->dumpFile(
+            Path::join($outputDir, GenerateCommand::FILE_ACTIONS),
+            $this->jsonEncode($this->actionsToTake)
+        );
+        $filesystem->dumpFile(
+            Path::join($outputDir, GenerateCommand::FILE_CHANGES),
+            $this->jsonEncode($this->breakingApiChanges)
+        );
         $this->output->writeln('Comparison complete.');
     }
 
@@ -353,5 +384,18 @@ class GenerateCommand extends BaseCommand
     private function jsonEncode(mixed $content): string
     {
         return json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    }
+
+    private function getActionsCount(): int
+    {
+        $count = 0;
+        foreach ($this->actionsToTake as $module => $moduleActions) {
+            foreach ($moduleActions as $actionType => $typeActions) {
+                foreach ($typeActions as $apiType => $apiActions) {
+                    $count += count($apiActions);
+                }
+            }
+        }
+        return $count;
     }
 }
