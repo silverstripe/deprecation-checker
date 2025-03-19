@@ -52,11 +52,11 @@ class RecipeFinder extends Finder
     /**
      * Reset the dirs property
      */
-    protected function resetDirs()
+    private function resetDirs()
     {
-        // Reset $this->dirs to the list of package paths
-        // I read http://fabien.potencier.org/pragmatism-over-theory-protected-vs-private.html and I feel depressed
-        // @TODO the clean way would be to just not re-use the same RecipeFinder, if we can do that.
+        // Reset $this->dirs to the list of package paths.
+        // This is necessary to ensure we have the dirs for the current version every time we iterate.
+        // We don't control where the iteration happens so we can't just instantiate a new RecipeFinder each time.
         $dirsProp = new ReflectionProperty(Finder::class, 'dirs');
         $dirsProp->setAccessible(true);
         $dirsProp->setValue($this, []);

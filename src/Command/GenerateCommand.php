@@ -58,19 +58,46 @@ class GenerateCommand extends BaseCommand
      */
     private const string IGNORE_PARSE_ERROR_REGEX = '/is missing a @param tag/';
 
+    /**
+     * Some information about the "from" version.
+     * Includes:
+     * - recipe (e.g. 'silverstripe/recipe-kitchen-sink')
+     * - constraint (e.g. '5.4.x-dev')
+     * - branch (e.g. '5.4')
+     * - path (absolute path to the cloned/from dir)
+     */
     private array $metaDataFrom;
 
+    /**
+     * Some information about the "to" version.
+     * Includes:
+     * - recipe (e.g. 'silverstripe/recipe-kitchen-sink')
+     * - constraint (e.g. '6.0.x-dev')
+     * - branch (e.g. '6.0')
+     * - path (absolute path to the cloned/to dir)
+     */
     private array $metaDataTo;
 
+    /**
+     * Associative array of supported modules metadata
+     */
     private array $supportedModules;
 
     /**
+     * Any errors that occurred during the parsing step
      * @var ParseError[]
      */
     private array $parseErrors = [];
 
+    /**
+     * Any steps that developers should take to tidy up
+     * e.g. deprecate API which has been removed
+     */
     private array $actionsToTake = [];
 
+    /**
+     * The full set of identified breaking API changes
+     */
     private array $breakingApiChanges = [];
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -114,22 +141,26 @@ class GenerateCommand extends BaseCommand
             $warnings[] = "$numActions actions to take. See '{$actionsFile}' for details.";
         }
 
-        // Output any warnings
-        if (!empty($warnings)) {
+        if (count($this->breakingApiChanges) < 1) {
+            // Output any warnings and then return - nothing more to do.
             foreach ($warnings as $message) {
                 $this->output->warning($message);
             }
-        }
-
-        if (count($this->breakingApiChanges) < 1) {
             $this->output->success('No API breaking changes to add to the changelog.');
             return BaseCommand::SUCCESS;
         }
 
         // Render changelog chunk
+        $this->output->writeln('Rendering...');
         $changelogPath = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_CHANGELOG);
         $renderer = new Renderer($this->metaDataFrom, $this->metaDataTo, $parsed);
         $renderer->render($this->breakingApiChanges, $dataDir, $changelogPath);
+        $this->output->writeln('Rendering complete.');
+
+        // Output any warnings
+        foreach ($warnings as $message) {
+            $this->output->warning($message);
+        }
 
         // output a message including path to the file(s) to check.
         $this->output->success("Changelog chunk generated successfully. See '$changelogPath'");
@@ -152,12 +183,7 @@ class GenerateCommand extends BaseCommand
             InputOption::VALUE_NONE,
             'Flushes parser and twig cache. Useful when developing this tool or after running <info>clone</info> again.'
         );
-        // @TODO "--only" like module standardiser
-        // @TODO "--exclude" like module standardiser
-        // @TODO maybe "--analyse-only"? Which would check what needs to be done without building the changelog output
-        // @TODO do we need to indicate which end we care about?
-        //       i.e. are we making a changelog for what was DEPRECATED in 5, or what is REMOVED in 6?
-        //       For now assume the latter.
+        $this->setHelp('Also generates useful data e.g. actions that need to be taken to clean up existing deprecations.');
     }
 
     private function fetchMetaData(string $dataDir): void
@@ -186,10 +212,9 @@ class GenerateCommand extends BaseCommand
     {
         $this->output->writeln('Finding supported modules across both branches.');
         $supportedModules = MetaData::getAllRepositoryMetaData(true)[MetaData::CATEGORY_SUPPORTED];
-        $cmsMajorFrom = $this->getCmsMajor($this->metaDataFrom);
         $cmsMajorTo = $this->getCmsMajor($this->metaDataTo);
-        // Make sure we only have supported modules that are in BOTH major releases
-        // $supportedModules = MetaData::removeReposNotInCmsMajor($supportedModules, $cmsMajorFrom, true);
+        // Make sure we only have supported modules that are in the "to" version.
+        // Don't also restrict to the "from" version because we need to know about new modules for API links.
         $supportedModules = MetaData::removeReposNotInCmsMajor($supportedModules, $cmsMajorTo, true);
         $this->supportedModules = $supportedModules;
     }
@@ -210,7 +235,7 @@ class GenerateCommand extends BaseCommand
     {
         $this->output->writeln('Parsing modules...');
 
-        $collection = new RecipeVersionCollection($this->supportedModules, $dataDir, $this->metaDataFrom['recipe']);
+        $collection = new RecipeVersionCollection($this->supportedModules, $dataDir);
         $store = new JsonStore();
         $project = new Project(
             $store,
@@ -234,9 +259,9 @@ class GenerateCommand extends BaseCommand
         $traverser->addVisitor(new NameResolver());
         $traverser->addVisitor(new NodeVisitor($parserContext));
 
-        // @TODO find the lowest common PHP version between versions
+        // NOTE currently the version of the dependency we're using doesn't have PHP 8 as a version, but does correctly parse PHP 8 code.
         $phpParser = (new ParserFactory())->create(ParserFactory::PREFER_PHP7);
-        $codeParser = new CodeParser($parserContext, $phpParser, $traverser); // @TODO use PHP version detection per recipe version
+        $codeParser = new CodeParser($parserContext, $phpParser, $traverser);
 
         $visitors = [
             new InheritdocClassVisitor(),
@@ -247,7 +272,6 @@ class GenerateCommand extends BaseCommand
         $parser = new Parser($iterator, $store, $codeParser, $projectTraverser);
         $project->setParser($parser);
         // @TODO can use callback arg to output current step
-        // @TODO check what the $force bool does and if we need that
         $project->parse(function (string $messageType, mixed $data) {
             // @TODO Probably use a progress bar when not in verbose mode.
             //       Also check out Doctum\Console\Command\Command::messageCallback()

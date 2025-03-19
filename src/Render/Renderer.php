@@ -19,7 +19,7 @@ class Renderer
 
     private Project $parsedProject;
 
-    public function __construct(array $metaDataFrom, array $metaDataTo, Project $parsedProject) // @TODO accept OutputInterface and output some stuff
+    public function __construct(array $metaDataFrom, array $metaDataTo, Project $parsedProject)
     {
         $this->metaDataFrom = $metaDataFrom;
         $this->metaDataTo = $metaDataTo;

@@ -2,6 +2,8 @@
 
 This tool generates the deprecation notice section of a changelog for a Silverstripe CMS release.
 
+It also lets you know if you need to perform follow-up actions (e.g. if some removed API didn't have a deprecation notice).
+
 **This tool is only intended for use by Silverstripe core committers or the Silverstripe Ltd CMS Squad**
 
 ## Setup
@@ -24,3 +26,9 @@ If you're unsure of usage at any time, use the `--help` flag to get more details
     - For example `bin/deprecation-changelog-generator generate --dir=~/dump/changelog`
 
 This tool uses the `composer` binary on your machine directly, so you shouldn't have any trouble with hitting API rate limits, etc.
+
+## Limitations
+
+- The parsing library used doesn't currently pick up on [enums](https://www.php.net/manual/en/language.types.enumerations.php)
+- The parsing library used doesn't currently pick up on globally-scoped consts
+- Due to https://github.com/code-lts/doctum/issues/76 types may not evaluate completely to FQCN

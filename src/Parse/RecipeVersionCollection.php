@@ -19,17 +19,14 @@ class RecipeVersionCollection extends VersionCollection
 
     private string $basePath;
 
-    public function __construct(array $supportedModules, string $basePath, string $baseRecipe)
+    public function __construct(array $supportedModules, string $basePath)
     {
         parent::__construct([CodeComparer::FROM, CodeComparer::TO]);
         $this->version = $this->versions[0];
         $this->basePath = $basePath;
         foreach ($supportedModules as $moduleData) {
-            if ($moduleData['type'] === 'theme') {
-                continue;
-            }
-            if ($moduleData['packagist'] === $baseRecipe) {
-                // @TODO This is a bit ugly having to just ignore it entirely... can we do something else instead?
+            // Themes have no PHP and any PHP in recipes gets pulled into the project anyway.
+            if ($moduleData['type'] === 'theme' || $moduleData['type'] === 'recipe') {
                 continue;
             }
             $this->supportedModules[$moduleData['packagist']] = $moduleData;

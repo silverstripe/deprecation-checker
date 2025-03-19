@@ -49,7 +49,7 @@ class CodeComparer
 
     public function __construct(OutputInterface $output)
     {
-        $this->output = $output; // @TODO decide whether to provide some verbose output
+        $this->output = $output;
     }
 
     public function getBreakingChanges(): array
@@ -131,6 +131,7 @@ class CodeComparer
         FunctionReflection $functionFrom,
         ?FunctionReflection $functionTo
     ) {
+        $this->output->writeln("Checking globally-scoped function $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $fileFrom = $functionFrom->getFile();
         $fileTo = $functionTo?->getFile();
         $module = $this->getModuleForFile($fileFrom);
@@ -191,6 +192,7 @@ class CodeComparer
             3 => 'trait',
             default => null,
         };
+        $this->output->writeln("Checking $apiTypeFrom $fqcn", OutputInterface::VERBOSITY_VERY_VERBOSE);
 
         $fileFrom = $classFrom->getFile();
         $fileTo = $classTo?->getFile();
@@ -261,6 +263,7 @@ class CodeComparer
         ?ConstantReflection $constTo,
         string $module
     ) {
+        $this->output->writeln("Checking constant $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         /** @var ClassReflection|null $classFrom */
         $classFrom = $constFrom->getClass();
         $fileFrom = method_exists($classFrom ?? '', 'getFile') ? $classFrom->getFile() : null;
@@ -322,6 +325,7 @@ class CodeComparer
         ?PropertyReflection $propertyTo,
         string $module
     ) {
+        $this->output->writeln("Checking property $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $type = $this->getTypeFromReflection($propertyFrom);
         /** @var ClassReflection|null $classFrom */
         $classFrom = $propertyFrom->getClass();
@@ -365,7 +369,6 @@ class CodeComparer
      */
     private function checkMethods(string $className, array $methodsFrom, array $methodsTo, string $module)
     {
-        // @TODO make sure no @method tags are listed in here.
         // Compare methods that have the same name in both versions or removed in the new one
         foreach ($methodsFrom as $methodName => $method) {
             if ($method->getClass()?->getName() !== $className) {
@@ -396,6 +399,7 @@ class CodeComparer
         ?MethodReflection $methodTo,
         string $module
     ) {
+        $this->output->writeln("Checking method $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $classFrom = $methodFrom->getClass();
         $fileFrom = method_exists($classFrom ?? '', 'getFile') ? $classFrom->getFile() : null;
         $dataFrom = [
@@ -484,6 +488,7 @@ class CodeComparer
         ?ParameterReflection $parameterTo,
         string $module
     ) {
+        $this->output->writeln("Checking parameter $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         // The getClass() method will check against the method, so we have to check if the method's there or not first.
         $classFrom = $parameterFrom->getMethod() ? $parameterFrom->getClass() : null;
         $fileFrom = $classFrom ? $classFrom->getFile() : $parameterFrom->getFunction()?->getFile();
@@ -541,14 +546,31 @@ class CodeComparer
         }
 
         // Change to the default value
-        // @TODO May need to do a more manual comparison here.
-        if ($parameterFrom->getDefault() !== $parameterTo->getDefault()) {
+        if ($this->defaultParamValuesDiffer($parameterFrom->getDefault(), $parameterTo->getDefault())) {
             $this->breakingChanges[$module]['default'][$type][$name] = [
                 ...$dataTo,
                 CodeComparer::FROM => $parameterFrom->getDefault(),
                 CodeComparer::TO => $parameterTo->getDefault(),
             ];
         }
+    }
+
+    private function defaultParamValuesDiffer(mixed $valueFrom, mixed $valueTo): bool
+    {
+        if ($valueFrom !== $valueTo) {
+            // I think it IS always a string, but the API doesn't guarantee that.
+            // For safety, anything that isn't a string just gets a straight equality check.
+            if (!is_string($valueFrom) || !is_string($valueTo)) {
+                return true;
+            }
+            // See if the quote types are all that changed.
+            // The values are RAW - i.e. string values include their surrounding quotes.
+            // This is a very naive way to check if the quotes are all that changed - there are probably a lot of edge cases.
+            $fromUseSingleQuote = str_replace(['\\"', '"'], "'", $valueFrom);
+            $toUseSingleQuote = str_replace(['\\"', '"'], "'", $valueTo);
+            return $fromUseSingleQuote !== $toUseSingleQuote;
+        }
+        return false;
     }
 
     /**
@@ -752,17 +774,6 @@ class CodeComparer
      */
     private function getHintStringWithFQCN(array $hints, bool $isIntersectionType): string
     {
-        /*
-        {%- for hint in hints %}
-            {%- if hint.class %}
-                {{- class_link(hint.name) }}
-            {%- elseif hint.name %}
-                {{- abbr_class(hint.name) }}
-            {%- endif %}
-            {%- if hint.array %}[]{% endif %}
-            {%- if not loop.last %}{%- if isIntersectionType %}&{% else %}|{% endif %}{% endif %}
-        {%- endfor %}
-        */
         $hintParts = [];
         foreach ($hints as $hint) {
             $hintParts[] = (string) $hint->getName();
