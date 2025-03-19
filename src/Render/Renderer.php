@@ -19,7 +19,7 @@ class Renderer
 
     private Project $parsedProject;
 
-    public function __construct(array $metaDataFrom, array $metaDataTo, Project $parsedProject)
+    public function __construct(array $metaDataFrom, array $metaDataTo, Project $parsedProject) // @TODO accept OutputInterface and output some stuff
     {
         $this->metaDataFrom = $metaDataFrom;
         $this->metaDataTo = $metaDataTo;
@@ -62,9 +62,10 @@ class Renderer
                 'visibility' => $apiTypeOrder,
                 'returnType' => $apiTypeOrder,
                 'type' => $apiTypeOrder,
+                'renamed' => $apiTypeOrder,
+                'new' => $apiTypeOrder, // params only
                 'abstract' => $apiTypeOrder,
                 'final' => $apiTypeOrder,
-                'new' => $apiTypeOrder, // params only
                 'returnByRef' => $apiTypeOrder,
                 'passByRef' => $apiTypeOrder,
                 'readonly' => $apiTypeOrder,
@@ -74,7 +75,7 @@ class Renderer
             foreach ($moduleChanges as $changeType => $typeChanges) {
                 foreach ($typeChanges as $apiType => $apiChanges) {
                     foreach ($apiChanges as $apiName => $apiData) {
-                        $message = $this->getMessageForChange($changeType, $apiType, $apiName, $apiData, $this->parsedProject);
+                        $message = $this->getMessageForChange($changeType, $apiType, $apiName, $apiData);
                         $sortedChanges[$module][$changeType][$apiType][$apiName] = $message;
                     }
                     // asort over ksort because we want the FQCN of the API to be the sort order, not just e.g. the method name on its own.
@@ -97,13 +98,23 @@ class Renderer
         return $formattedChanges;
     }
 
-    private function getMessageForChange(string $changeType, string $apiType, string $apiName, array $apiData, Project $parsedProject): string
+    private function getMessageForChange(string $changeType, string $apiType, string $apiName, array $apiData): string
     {
         $apiTypeForMessage = $apiData['apiType'];
         $apiReference = $this->getApiReference($apiType, $apiName, $apiData, $changeType);
         $deprecationMessage = $apiData['message'] ?? null;
-        $from = $this->normaliseChangedValue($apiData[CodeComparer::FROM] ?? null, $changeType);
-        $to = $this->normaliseChangedValue($apiData[CodeComparer::TO] ?? null, $changeType);
+        $from = $this->normaliseChangedValue(
+            $apiData[CodeComparer::FROM] ?? null,
+            $apiData[CodeComparer::FROM . 'Orig'] ?? null,
+            $changeType,
+            $apiType
+        );
+        $to = $this->normaliseChangedValue(
+            $apiData[CodeComparer::TO] ?? null,
+            $apiData[CodeComparer::TO . 'Orig'] ?? null,
+            $changeType,
+            $apiType
+        );
         $overriddenOrSubclassed = $apiType === 'class' ? 'subclassed' : 'overridden';
 
         // Make the message
@@ -115,6 +126,7 @@ class Renderer
             'new' => "Added new $apiTypeForMessage $apiReference",
             'passByRef' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' passed by reference',
             'readonly' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' read-only',
+            'renamed' => "Renamed $apiTypeForMessage $apiReference to $to",
             'removed' => "Removed deprecated $apiTypeForMessage $apiReference",
             'returnByRef' => ucfirst($apiTypeForMessage) . " $apiReference " . ($apiData['isNow'] ? 'now' : 'no longer') . ' returns its value by reference',
             'returnType' => "Changed return type for $apiTypeForMessage $apiReference from $from to $to",
@@ -125,46 +137,49 @@ class Renderer
 
         // Add deprecation message if appropriate and available
         if (($changeType === 'removed' || $changeType === 'internal') && $deprecationMessage) {
+            // Tidy it up first and replace FQCN with API links
             $deprecationMessage = lcfirst(trim(preg_replace('/^(will be)/i', '', $deprecationMessage)));
-            // Regex uses example from https://www.php.net/manual/en/language.oop5.basic.php#language.oop5.basic.class
-            // Captures any FQCN-looking string, plus optional const/method/property/config tacked on the end.
-            // Note the quadrupal \\\\ is a regex match for a single \
-            $apiRegex = '/(?<class>[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\\\\[^\s`:."\'-]*)(?<rest>(?:\.|::|->)[a-zA-Z0-9_-]+(?:\(\))?)?/';
-            $deprecationMessage = preg_replace_callback(
-                $apiRegex,
-                function(array $match) use ($parsedProject) {
-                    $class = $match['class'];
-                    if ($class === 'Symfony\Component\HttpFoundation\IpUtils') {
-                        echo '';
-                    }
-                    $classReflection = $parsedProject->getClass($class);
-                    // If that class doesn't exist (e.g. symfony class) just backtick the full reference.
-                    if (!$classReflection || $classReflection->getFile() === null) {
-                        return "`{$match[0]}`";
-                    }
-                    // Get the API reference
-                    $rest = $match['rest'] ?? null;
-                    if ($rest) {
-                        if (preg_match('/^::(.*)\(\)$/', $rest, $restMatch)) {
-                            return $this->getApiReference('method', $restMatch[1], ['class' => $class]);
-                        } elseif (preg_match('/^::(.*)$/', $rest, $restMatch)) {
-                            return $this->getApiReference('const', $restMatch[1], ['class' => $class]);
-                        } elseif (preg_match('/^.(.*)/', $rest, $restMatch)) {
-                            return $this->getApiReference('config', $restMatch[1], ['class' => $class]);
-                        } elseif (preg_match('/^->(.*)/', $rest, $restMatch)) {
-                            return $this->getApiReference('property', $restMatch[1], ['class' => $class]);
-                        } else {
-                            throw new LogicException("Unexpected API reference in deprecation notice: '{$match[0]}'");
-                        }
-                    }
-                    return $this->getApiReference('class', $class);
-                },
-                $deprecationMessage
-            );
+            $deprecationMessage = $this->replaceClassWithApiLink($deprecationMessage);
             $message .= " - $deprecationMessage";
         }
 
         return $message;
+    }
+
+    private function replaceClassWithApiLink(string $message, bool $backTickAsFallback = true): string
+    {
+        // Regex uses example from https://www.php.net/manual/en/language.oop5.basic.php#language.oop5.basic.class
+        // Captures any FQCN-looking string, plus optional const/method/property/config tacked on the end.
+        // Note the quadrupal \\\\ is a regex match for a single \
+        $apiRegex = '/(?<class>[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\\\\[^\s`:."\'&|-]+)(?<rest>(?:\.|::|->)[a-zA-Z0-9_-]+(?:\(\))?)?/';
+        return preg_replace_callback(
+            $apiRegex,
+            function(array $match) use ($backTickAsFallback) {
+                $class = $match['class'];
+                $classReflection = $this->parsedProject->getClass($class);
+                // If that class doesn't exist (e.g. symfony class or removed in new version) just backtick the full reference.
+                if (!$classReflection || $classReflection->getFile() === null) {
+                    return $backTickAsFallback ? "`{$match[0]}`" : $match[0];
+                }
+                // Get the API reference
+                $rest = $match['rest'] ?? null;
+                if ($rest) {
+                    if (preg_match('/^::(.*)\(\)$/', $rest, $restMatch)) {
+                        return $this->getApiReference('method', $restMatch[1], ['class' => $class]);
+                    } elseif (preg_match('/^::(.*)$/', $rest, $restMatch)) {
+                        return $this->getApiReference('const', $restMatch[1], ['class' => $class]);
+                    } elseif (preg_match('/^.(.*)/', $rest, $restMatch)) {
+                        return $this->getApiReference('config', $restMatch[1], ['class' => $class]);
+                    } elseif (preg_match('/^->(.*)/', $rest, $restMatch)) {
+                        return $this->getApiReference('property', $restMatch[1], ['class' => $class]);
+                    } else {
+                        throw new LogicException("Unexpected API reference in deprecation notice: '{$match[0]}'");
+                    }
+                }
+                return $this->getApiReference('class', $class);
+            },
+            $message
+        );
     }
 
     /**
@@ -226,7 +241,7 @@ class Renderer
                 $class = $apiData['class'];
                 $parent = $this->getApiReference('method', $method, ['class' => $class]);
             }
-            return "`$apiName` in $parent";
+            return "`\$$apiName` in $parent";
         }
         throw new InvalidArgumentException("Unexpected API type $apiType");
     }
@@ -237,8 +252,12 @@ class Renderer
         return array_pop($parts);
     }
 
-    private function normaliseChangedValue(?string $value, string $changeType): string
+    private function normaliseChangedValue(?string $value, ?string $origValue, string $changeType, string $apiType): string
     {
+        if ($value && $changeType === 'renamed' && $apiType === 'param') {
+            return "`\$$value`";
+        }
+
         if ($value === null || $value === '') {
             // Depending on the type of change, the reference is different.
             return match ($changeType) {
@@ -249,7 +268,46 @@ class Renderer
                 default => '',
             };
         }
-        // add backticks
-        return "`$value`";
+        $valueWithLinks = $this->replaceClassWithApiLink($value, false);
+
+        // If any class wasn't resolved into an API link, assume $value is malformed and fall back to $origValue.
+        // See https://github.com/code-lts/doctum/issues/76 for why this is necessary.
+        $apiLinkRegex = '/\[`.+`\]\(api:.+\)/';
+        if (!preg_match($apiLinkRegex, $valueWithLinks) && str_contains($valueWithLinks, '\\')) {
+            $valueWithLinks = $origValue;
+        }
+
+        // For now CodeComparer provides only one of `|` or `&` so we don't need to worry about weird
+        // union/intersection combinations
+        $parts = explode('&', $valueWithLinks);
+        $separator = '&';
+        if (count($parts) === 1) {
+            $parts = explode('|', $valueWithLinks);
+            $separator = '|';
+        }
+        $normalised = '';
+        $prevWasApiLink = false;
+        // Wrap backticks around all parts that aren't API links
+        foreach ($parts as $i => $type) {
+            $isFirst = $i === 0;
+            if (preg_match($apiLinkRegex, $type)) {
+                // $type is an API link
+                if (!$isFirst) {
+                    $normalised .= $separator . '`';
+                }
+                $normalised .= $type;
+                $prevWasApiLink = true;
+            } else {
+                if ($prevWasApiLink) {
+                    $normalised .= '`';
+                }
+                $normalised .= ($isFirst ? '`' : $separator) . $type;
+                $prevWasApiLink = false;
+            }
+        }
+        if (!$prevWasApiLink) {
+            $normalised .= '`';
+        }
+        return $normalised;
     }
 }

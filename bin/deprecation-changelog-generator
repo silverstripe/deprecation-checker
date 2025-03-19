@@ -13,4 +13,3 @@ $application->addCommands([
     new Command\GenerateCommand(),
 ]);
 $application->run();
-

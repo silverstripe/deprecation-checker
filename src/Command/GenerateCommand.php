@@ -18,8 +18,6 @@ use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
 use Doctum\Store\JsonStore;
 use Doctum\Version\Version;
-use InvalidArgumentException;
-use LogicException;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
@@ -41,8 +39,6 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
-use Twig\Environment;
-use Twig\Loader\FilesystemLoader;
 
 #[AsCommand('generate', 'Generate the deprecation section of a changelog')]
 class GenerateCommand extends BaseCommand
@@ -328,8 +324,8 @@ class GenerateCommand extends BaseCommand
     {
         $this->output->writeln('Comparing API between versions...');
         $outputDir = Path::join($dataDir, GenerateCommand::DIR_OUTPUT);
-        $comparer = new CodeComparer($parsedProject, $this->output);
-        $comparer->compare();
+        $comparer = new CodeComparer($this->output);
+        $comparer->compare($parsedProject);
         $this->actionsToTake = $comparer->getActionsToTake();
         $this->breakingApiChanges = $comparer->getBreakingChanges();
 

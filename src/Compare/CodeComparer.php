@@ -6,6 +6,7 @@ use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
 use Doctum\Reflection\ConstantReflection;
 use Doctum\Reflection\FunctionReflection;
+use Doctum\Reflection\HintReflection;
 use Doctum\Reflection\MethodReflection;
 use Doctum\Reflection\ParameterReflection;
 use Doctum\Reflection\PropertyReflection;
@@ -40,17 +41,14 @@ class CodeComparer
      */
     public const string ACTION_FIX_DEPRECATION = 'fix-deprecation';
 
-    private Project $project;
-
     private OutputInterface $output;
 
     private array $breakingChanges = [];
 
     private array $actionsToTake = [];
 
-    public function __construct(Project $project, OutputInterface $output)
+    public function __construct(OutputInterface $output)
     {
-        $this->project = $project;
         $this->output = $output; // @TODO decide whether to provide some verbose output
     }
 
@@ -64,23 +62,18 @@ class CodeComparer
         return $this->actionsToTake;
     }
 
-    public function compare()
+    public function compare(Project $project)
     {
-        $fromProject = $this->project;
-        // @TODO find out what the $force arg does and if we need to set it
+        $fromProject = $project;
         $fromProject->switchVersion(new Version(CodeComparer::FROM));
-        $toProject = clone $this->project;
+        $toProject = clone $project;
         $toProject->switchVersion(new Version(CodeComparer::TO));
 
-        // @TODO is there a way to get the global consts?
-        //       We'd want to check for any consts that went missing or were deprecated and not removed, etc
-
         // Compare global functions that are provided in Silverstripe CMS code
-        $functionsTo = $toProject->getProjectFunctions();
-        foreach ($fromProject->getProjectFunctions() as $index => $functionInfo) {
+        $functionsTo = $this->getFunctionsByName($toProject);
+        foreach ($this->getFunctionsByName($fromProject) as $functionName => $functionInfo) {
             // Note the index of this array isn't the function name, unlike with classes and interfaces.
-            $this->checkGlobalFunction($functionInfo->getName(), $functionInfo, $functionsTo[$index] ?? null);
-            // @TODO Index may not be identical across from and to!!!!! Need a more robust way to get the "TO" version
+            $this->checkGlobalFunction($functionInfo->getName(), $functionInfo, $functionsTo[$functionName] ?? null);
         }
         // Free up some memory
         unset($functionsTo);
@@ -106,6 +99,20 @@ class CodeComparer
         /**
          * @TODO Consider iterating over $toProject now and check for NEWLY deprecated code (including new code immediately deprecated)
          */
+    }
+
+    /**
+     * Get an associative array of functions, since Project::getProjectFunctions() is uniquely 0-indexed.
+     *
+     * @return array<string, FunctionReflection>
+     */
+    private function getFunctionsByName(Project $project): array
+    {
+        $functions = [];
+        foreach ($project->getProjectFunctions() as $function) {
+            $functions[$function->getName()] = $function;
+        }
+        return $functions;
     }
 
     /**
@@ -429,19 +436,31 @@ class CodeComparer
      * @param array<string,ParameterReflection> $parametersFrom
      * @param array<string,ParameterReflection> $parametersTo
      */
-    private function checkParameters(array $parametersFrom, array $parametersTo, string $module) {
+    private function checkParameters(array $parametersFrom, array $parametersTo, string $module)
+    {
         // Compare parameters that have the same name in both versions or removed in the new one
+        $count = 0;
+        $notNew = [];
         foreach ($parametersFrom as $paramName => $parameter) {
-            $this->checkParameter($paramName, $parameter, $parametersTo[$paramName] ?? null, $module);
+            $paramTo = $parametersTo[$paramName] ?? null;
+            if ($paramTo === null) {
+                // Assume params in the same position are the same param, just renamed.
+                $paramTo = array_values($parametersTo)[$count] ?? null;
+                $notNew[$paramTo?->getName() ?? ''] = true;
+            }
+            $this->checkParameter($paramName, $parameter, $paramTo, $module);
+            $count++;
         }
 
         // New params are also breaking API changes so we need to be aware of those
-        $newParams = array_diff($parametersTo, $parametersFrom);
+        $newParams = array_diff_key($parametersTo, $parametersFrom, $notNew);
         $type = null;
         foreach ($newParams as $paramName => $newParam) {
             $type ??= $this->getTypeFromReflection($newParam);
             $this->breakingChanges[$module]['new'][$type][$paramName] = [
-                'hint' => $newParam->getHint(),
+                'hint' => $this->getHintStringWithFQCN($newParam->getHint(), $newParam->isIntersectionType()),
+                // Because of https://github.com/code-lts/doctum/issues/76 we can't always rely on the FQCN resolution above.
+                'hintOrig' => $newParam->getHintAsString(),
                 'function' => $newParam->getFunction()?->getName(),
                 'method' => $newParam->getMethod()?->getName(),
                 'class' => $newParam->getClass()?->getName(),
@@ -488,14 +507,22 @@ class CodeComparer
             'apiType' => 'parameter',
         ];
 
-        // Param has been removed (or renamed - we can't easily tell the difference)
-        // @TODO old compare code may help with telling if it was just renamed??
+        // Check if param has been removed
         $isMissing = $this->checkForMissingApi($name, $parameterFrom, $parameterTo, $dataFrom, $dataTo, $module);
         if ($isMissing) {
             return;
         }
 
         $this->checkForSignatureChanges($name, $parameterFrom, $parameterTo, $dataFrom, $dataTo, $module);
+
+        // Check if param was renamed
+        if ($parameterTo->getName() !== $name) {
+            $this->breakingChanges[$module]['renamed'][$type][$name] = [
+                ...$dataTo,
+                CodeComparer::FROM => $name,
+                CodeComparer::TO => $parameterTo->getName(),
+            ];
+        }
 
         // Changed whether it's variable-length (preceded with `...`) or not
         if ($parameterFrom->getVariadic() !== $parameterTo->getVariadic()) {
@@ -560,14 +587,22 @@ class CodeComparer
         }
 
         // API didn't used to be @internal, but it is now (removes it from our public API surface)
-        if ($reflectionFrom->isInternal() && !$reflectionTo->isInternal()) {
+        if (!$reflectionFrom->isInternal() && $reflectionTo->isInternal()) {
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
                 $this->actionsToTake[$module][CodeComparer::ACTION_DEPRECATE][$type][$name] = $dataFrom;
             }
-            $this->breakingChanges[$module]['internal'][$type][$name] = [
-                ...$dataFrom,
-                'message' => $this->getDeprecationMessage($name, $reflectionFrom, $dataFrom, $module),
-            ];
+            if ($type === 'config') {
+                // @internal config is literally removed, because it won't be picked up as config anymore.
+                $this->breakingChanges[$module]['removed'][$type][$name] = [
+                    ...$dataFrom,
+                    'message' => $this->getDeprecationMessage($name, $reflectionFrom, $dataFrom, $module),
+                ];
+            } else {
+                $this->breakingChanges[$module]['internal'][$type][$name] = [
+                    ...$dataFrom,
+                    'message' => $this->getDeprecationMessage($name, $reflectionFrom, $dataFrom, $module),
+                ];
+            }
             // Internal API is effectively removed.
             return true;
         }
@@ -604,11 +639,15 @@ class CodeComparer
 
         // Check for type changes
         if ($hintType !== null && $reflectionFrom->getHintAsString() !== $reflectionTo->getHintAsString()) {
+            $isIntersectionTypeFrom = method_exists($reflectionFrom, 'isIntersectionType') ? $reflectionFrom->isIntersectionType() : false;
+            $isIntersectionTypeTo = method_exists($reflectionTo, 'isIntersectionType') ? $reflectionTo->isIntersectionType() : false;
             $this->breakingChanges[$module][$hintType][$type][$name] = [
                 ...$dataTo,
-                // @TODO getHintAsString gives short class names, e.g. `Controller` instead of `SilverStripe\Control\Controller`
-                CodeComparer::FROM => $reflectionFrom->getHintAsString(),
-                CodeComparer::TO => $reflectionTo->getHintAsString(),
+                CodeComparer::FROM => $this->getHintStringWithFQCN($reflectionFrom->getHint(), $isIntersectionTypeFrom),
+                CodeComparer::TO => $this->getHintStringWithFQCN($reflectionTo->getHint(), $isIntersectionTypeTo),
+                // Because of https://github.com/code-lts/doctum/issues/76 we can't always rely on the FQCN resolution above.
+                CodeComparer::FROM . 'Orig' => $reflectionFrom->getHintAsString(),
+                CodeComparer::TO . 'Orig' => $reflectionTo->getHintAsString(),
             ];
         }
 
@@ -703,5 +742,33 @@ class CodeComparer
             throw new LogicException("There is no module name identifiable in the path '$filePath'");
         }
         return $module;
+    }
+
+    /**
+     * Get the string for a typehint including the FQCN of classes where appropriate.
+     * Note that Reflection::getHintAsString() ignores both intersection types and FQCN.
+     *
+     * @param HintReflection[] $hints
+     */
+    private function getHintStringWithFQCN(array $hints, bool $isIntersectionType): string
+    {
+        /*
+        {%- for hint in hints %}
+            {%- if hint.class %}
+                {{- class_link(hint.name) }}
+            {%- elseif hint.name %}
+                {{- abbr_class(hint.name) }}
+            {%- endif %}
+            {%- if hint.array %}[]{% endif %}
+            {%- if not loop.last %}{%- if isIntersectionType %}&{% else %}|{% endif %}{% endif %}
+        {%- endfor %}
+        */
+        $hintParts = [];
+        foreach ($hints as $hint) {
+            $hintParts[] = (string) $hint->getName();
+        }
+        $separator = $isIntersectionType ? '&' : '|';
+        $x = implode($separator, $hintParts);
+        return $x;
     }
 }
