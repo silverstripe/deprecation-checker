@@ -23,7 +23,7 @@ use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard as PrettyPrinter;
 use RuntimeException;
-use Silverstripe\DeprecationChangelogGenerator\Compare\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
 use Silverstripe\DeprecationChangelogGenerator\Parse\DocBlockParser;
 use Silverstripe\DeprecationChangelogGenerator\Parse\IncludeConfigFilter;
 use Silverstripe\DeprecationChangelogGenerator\Parse\RecipeFinder;
@@ -191,16 +191,16 @@ class GenerateCommand extends BaseCommand
         $this->output->writeln('Collating metadata about the recipe in its two branches.');
         // check for presence of the clone dirs
         if (
-            !is_dir(Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::FROM))
-            || !is_dir(Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::TO))
+            !is_dir(Path::join($dataDir, CloneCommand::DIR_CLONE, BreakingChangesComparer::FROM))
+            || !is_dir(Path::join($dataDir, CloneCommand::DIR_CLONE, BreakingChangesComparer::TO))
         ) {
             throw new InvalidOptionException(
                 "'$dataDir' is missing one or both of the cloned directories. Run the clone command."
             );
         }
 
-        $fromFile = Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::FROM, CloneCommand::META_FILE);
-        $toFile = Path::join($dataDir, CloneCommand::DIR_CLONE, CodeComparer::TO, CloneCommand::META_FILE);
+        $fromFile = Path::join($dataDir, CloneCommand::DIR_CLONE, BreakingChangesComparer::FROM, CloneCommand::META_FILE);
+        $toFile = Path::join($dataDir, CloneCommand::DIR_CLONE, BreakingChangesComparer::TO, CloneCommand::META_FILE);
 
         $this->metaDataFrom = $this->getJsonFromFile($fromFile);
         $this->metaDataTo = $this->getJsonFromFile($toFile);
@@ -348,7 +348,7 @@ class GenerateCommand extends BaseCommand
     {
         $this->output->writeln('Comparing API between versions...');
         $outputDir = Path::join($dataDir, GenerateCommand::DIR_OUTPUT);
-        $comparer = new CodeComparer($this->output);
+        $comparer = new BreakingChangesComparer($this->output);
         $comparer->compare($parsedProject);
         $this->actionsToTake = $comparer->getActionsToTake();
         $this->breakingApiChanges = $comparer->getBreakingChanges();

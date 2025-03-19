@@ -8,7 +8,7 @@ use Packagist\Api\Client as PackagistClient;
 use Packagist\Api\PackageNotFoundException;
 use Packagist\Api\Result\Package;
 use RuntimeException;
-use Silverstripe\DeprecationChangelogGenerator\Compare\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
 use SilverStripe\SupportedModules\MetaData;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Exception\InvalidOptionException;
@@ -105,11 +105,11 @@ class CloneCommand extends BaseCommand
     private function clone(string $recipe, string $outputDir): void
     {
         $fromConstraint = $this->input->getArgument('fromConstraint');
-        $fromDir = Path::join($outputDir, CloneCommand::DIR_CLONE, CodeComparer::FROM);
+        $fromDir = Path::join($outputDir, CloneCommand::DIR_CLONE, BreakingChangesComparer::FROM);
         $this->cloneForConstraint($recipe, $fromConstraint, $fromDir);
 
         $toConstraint = $this->input->getArgument('toConstraint');
-        $toDir = Path::join($outputDir, CloneCommand::DIR_CLONE, CodeComparer::TO);
+        $toDir = Path::join($outputDir, CloneCommand::DIR_CLONE, BreakingChangesComparer::TO);
         $this->cloneForConstraint($recipe, $toConstraint, $toDir);
     }
 

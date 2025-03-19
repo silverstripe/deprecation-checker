@@ -6,7 +6,7 @@ use Doctum\Project;
 use Doctum\Version\Version;
 use InvalidArgumentException;
 use LogicException;
-use Silverstripe\DeprecationChangelogGenerator\Compare\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
 use Symfony\Component\Filesystem\Path;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
@@ -28,7 +28,7 @@ class Renderer
 
     public function render(array $breakingApiChanges, string $baseDir, string $filePath)
     {
-        $this->parsedProject->switchVersion(new Version(CodeComparer::TO));
+        $this->parsedProject->switchVersion(new Version(BreakingChangesComparer::TO));
         $data = [
             'fromVersion' => $this->metaDataFrom['branch'],
             'toVersion' => $this->metaDataTo['branch'],
@@ -104,14 +104,14 @@ class Renderer
         $apiReference = $this->getApiReference($apiType, $apiName, $apiData, $changeType);
         $deprecationMessage = $apiData['message'] ?? null;
         $from = $this->normaliseChangedValue(
-            $apiData[CodeComparer::FROM] ?? null,
-            $apiData[CodeComparer::FROM . 'Orig'] ?? null,
+            $apiData[BreakingChangesComparer::FROM] ?? null,
+            $apiData[BreakingChangesComparer::FROM . 'Orig'] ?? null,
             $changeType,
             $apiType
         );
         $to = $this->normaliseChangedValue(
-            $apiData[CodeComparer::TO] ?? null,
-            $apiData[CodeComparer::TO . 'Orig'] ?? null,
+            $apiData[BreakingChangesComparer::TO] ?? null,
+            $apiData[BreakingChangesComparer::TO . 'Orig'] ?? null,
             $changeType,
             $apiType
         );
@@ -277,7 +277,7 @@ class Renderer
             $valueWithLinks = $origValue;
         }
 
-        // For now CodeComparer provides only one of `|` or `&` so we don't need to worry about weird
+        // For now BreakingChangesComparer provides only one of `|` or `&` so we don't need to worry about weird
         // union/intersection combinations
         $parts = explode('&', $valueWithLinks);
         $separator = '&';

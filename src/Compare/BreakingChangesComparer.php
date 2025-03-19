@@ -20,7 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * Compares code between versions to find breaking API changes.
  */
-class CodeComparer
+class BreakingChangesComparer
 {
     public const string FROM = 'from';
 
@@ -65,9 +65,9 @@ class CodeComparer
     public function compare(Project $project)
     {
         $fromProject = $project;
-        $fromProject->switchVersion(new Version(CodeComparer::FROM));
+        $fromProject->switchVersion(new Version(BreakingChangesComparer::FROM));
         $toProject = clone $project;
-        $toProject->switchVersion(new Version(CodeComparer::TO));
+        $toProject->switchVersion(new Version(BreakingChangesComparer::TO));
 
         // Compare global functions that are provided in Silverstripe CMS code
         $functionsTo = $this->getFunctionsByName($toProject);
@@ -95,10 +95,6 @@ class CodeComparer
         }
         // Free up some memory
         unset($interfacesTo);
-
-        /**
-         * @TODO Consider iterating over $toProject now and check for NEWLY deprecated code (including new code immediately deprecated)
-         */
     }
 
     /**
@@ -219,8 +215,8 @@ class CodeComparer
         // Class-like has changed what type of class-like it is (e.g. from class to interface)
         if ($classFrom->getCategoryId() !== $classTo->getCategoryId()) {
             $this->breakingChanges[$module]['type'][$type][$fqcn] = [
-                CodeComparer::FROM => $apiTypeFrom,
-                CodeComparer::TO => $apiTypeTo,
+                BreakingChangesComparer::FROM => $apiTypeFrom,
+                BreakingChangesComparer::TO => $apiTypeTo,
             ];
         }
 
@@ -524,8 +520,8 @@ class CodeComparer
         if ($parameterTo->getName() !== $name) {
             $this->breakingChanges[$module]['renamed'][$type][$name] = [
                 ...$dataTo,
-                CodeComparer::FROM => $name,
-                CodeComparer::TO => $parameterTo->getName(),
+                BreakingChangesComparer::FROM => $name,
+                BreakingChangesComparer::TO => $parameterTo->getName(),
             ];
         }
 
@@ -549,8 +545,8 @@ class CodeComparer
         if ($this->defaultParamValuesDiffer($parameterFrom->getDefault(), $parameterTo->getDefault())) {
             $this->breakingChanges[$module]['default'][$type][$name] = [
                 ...$dataTo,
-                CodeComparer::FROM => $parameterFrom->getDefault(),
-                CodeComparer::TO => $parameterTo->getDefault(),
+                BreakingChangesComparer::FROM => $parameterFrom->getDefault(),
+                BreakingChangesComparer::TO => $parameterTo->getDefault(),
             ];
         }
     }
@@ -598,7 +594,7 @@ class CodeComparer
             // Mark whether we still need to deprecate it, and note the breaking change.
             // Note params can't be marked deprecated.
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
-                $this->actionsToTake[$module][CodeComparer::ACTION_DEPRECATE][$type][$name] = $dataFrom;
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = $dataFrom;
             }
             // Note the breaking change.
             $this->breakingChanges[$module]['removed'][$type][$name] = [
@@ -611,7 +607,7 @@ class CodeComparer
         // API didn't used to be @internal, but it is now (removes it from our public API surface)
         if (!$reflectionFrom->isInternal() && $reflectionTo->isInternal()) {
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
-                $this->actionsToTake[$module][CodeComparer::ACTION_DEPRECATE][$type][$name] = $dataFrom;
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = $dataFrom;
             }
             if ($type === 'config') {
                 // @internal config is literally removed, because it won't be picked up as config anymore.
@@ -633,7 +629,7 @@ class CodeComparer
         // Note we don't care about API that used to be deprecated but no longer is,
         // or which is deprecated in the new version but not the old.
         if ($type !== 'param' && $reflectionFrom->isDeprecated() && $reflectionTo->isDeprecated()) {
-            $this->actionsToTake[$module][CodeComparer::ACTION_REMOVE][$type][$name] = $dataTo;
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_REMOVE][$type][$name] = $dataTo;
         }
 
         return false;
@@ -665,11 +661,11 @@ class CodeComparer
             $isIntersectionTypeTo = method_exists($reflectionTo, 'isIntersectionType') ? $reflectionTo->isIntersectionType() : false;
             $this->breakingChanges[$module][$hintType][$type][$name] = [
                 ...$dataTo,
-                CodeComparer::FROM => $this->getHintStringWithFQCN($reflectionFrom->getHint(), $isIntersectionTypeFrom),
-                CodeComparer::TO => $this->getHintStringWithFQCN($reflectionTo->getHint(), $isIntersectionTypeTo),
+                BreakingChangesComparer::FROM => $this->getHintStringWithFQCN($reflectionFrom->getHint(), $isIntersectionTypeFrom),
+                BreakingChangesComparer::TO => $this->getHintStringWithFQCN($reflectionTo->getHint(), $isIntersectionTypeTo),
                 // Because of https://github.com/code-lts/doctum/issues/76 we can't always rely on the FQCN resolution above.
-                CodeComparer::FROM . 'Orig' => $reflectionFrom->getHintAsString(),
-                CodeComparer::TO . 'Orig' => $reflectionTo->getHintAsString(),
+                BreakingChangesComparer::FROM . 'Orig' => $reflectionFrom->getHintAsString(),
+                BreakingChangesComparer::TO . 'Orig' => $reflectionTo->getHintAsString(),
             ];
         }
 
@@ -679,8 +675,8 @@ class CodeComparer
         if ($visibilityFrom !== $visibilityTo) {
             $this->breakingChanges[$module]['visibility'][$type][$name] = [
                 ...$dataTo,
-                CodeComparer::FROM => $visibilityFrom,
-                CodeComparer::TO => $visibilityTo,
+                BreakingChangesComparer::FROM => $visibilityFrom,
+                BreakingChangesComparer::TO => $visibilityTo,
             ];
         }
 
@@ -707,7 +703,7 @@ class CodeComparer
 
         // There should only be one deprecation message.
         if (count($messagesArray) > 1) {
-            $this->actionsToTake[$module][CodeComparer::ACTION_FIX_DEPRECATION][$type][$name] = $data;
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = $data;
             return '';
         }
 
@@ -717,7 +713,7 @@ class CodeComparer
         } else {
             // If the first item in the array isn't a version number, the deprecation is malformed
             // We'll assume the message is present without a version number, though.
-            $this->actionsToTake[$module][CodeComparer::ACTION_FIX_DEPRECATION][$type][$name] = $data;
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = $data;
         }
 
         return implode(' ', $messageAsArray);
@@ -757,7 +753,7 @@ class CodeComparer
      */
     private function getModuleForFile(string $filePath): string
     {
-        $regex = '#' . CloneCommand::DIR_CLONE. '/(?:' . CodeComparer::FROM . '|' . CodeComparer::TO . ')/vendor/([^/]+/[^/]+)/#';
+        $regex = '#' . CloneCommand::DIR_CLONE. '/(?:' . BreakingChangesComparer::FROM . '|' . BreakingChangesComparer::TO . ')/vendor/([^/]+/[^/]+)/#';
         preg_match($regex, $filePath, $matches);
         $module = $matches[1];
         if (!$module) {

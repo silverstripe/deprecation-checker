@@ -5,7 +5,7 @@ namespace Silverstripe\DeprecationChangelogGenerator\Parse;
 use Doctum\Version\Version;
 use Doctum\Version\VersionCollection;
 use Silverstripe\DeprecationChangelogGenerator\Command\CloneCommand;
-use Silverstripe\DeprecationChangelogGenerator\Compare\CodeComparer;
+use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
 use Symfony\Component\Filesystem\Path;
 
 /**
@@ -21,7 +21,7 @@ class RecipeVersionCollection extends VersionCollection
 
     public function __construct(array $supportedModules, string $basePath)
     {
-        parent::__construct([CodeComparer::FROM, CodeComparer::TO]);
+        parent::__construct([BreakingChangesComparer::FROM, BreakingChangesComparer::TO]);
         $this->version = $this->versions[0];
         $this->basePath = $basePath;
         foreach ($supportedModules as $moduleData) {
