@@ -615,7 +615,10 @@ class BreakingChangesComparer
             // Mark whether we still need to deprecate it, and note the breaking change.
             // Note params can't be marked deprecated.
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
-                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = $dataFrom;
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = [
+                    ...$dataFrom,
+                    'message' => 'This API was removed, but hasn\'t been deprecated.',
+                ];
             }
             // Note the breaking change.
             $this->breakingChanges[$module]['removed'][$type][$name] = [
@@ -628,7 +631,10 @@ class BreakingChangesComparer
         // API didn't used to be @internal, but it is now (removes it from our public API surface)
         if (!$reflectionFrom->isInternal() && $reflectionTo->isInternal()) {
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
-                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = $dataFrom;
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = [
+                    ...$dataFrom,
+                    'message' => 'This API was made @internal, but hasn\'t been deprecated.',
+                ];
             }
             if ($type === 'config') {
                 // @internal config is literally removed, because it won't be picked up as config anymore.
@@ -650,7 +656,10 @@ class BreakingChangesComparer
         // Note we don't care about API that used to be deprecated but no longer is,
         // or which is deprecated in the new version but not the old.
         if ($type !== 'param' && $reflectionFrom->isDeprecated() && $reflectionTo->isDeprecated()) {
-            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_REMOVE][$type][$name] = $dataTo;
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_REMOVE][$type][$name] = [
+                ...$dataTo,
+                'message' => 'This API is deprecated, but hasn\'t been removed.',
+            ];
         }
 
         return false;
@@ -720,14 +729,26 @@ class BreakingChangesComparer
         $type = $this->getTypeFromReflection($reflection);
         $messagesArray = $reflection->getDeprecated();
 
-        // If there's no message, we already have an action to deprecate it (or it's a param which doesn't get a message)
-        if ($type === 'param' || empty($messagesArray)) {
+        // Params don't get deprecation messages, and anything that isn't deprecated obviously won't have a message.
+        if ($type === 'param' || !$reflection->isDeprecated()) {
+            return '';
+        }
+
+        // If there's no message at all, we need to add one.
+        if (empty($messagesArray)) {
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = [
+                ...$data,
+                'message' => 'The deprecation annotation is missing a message.',
+            ];
             return '';
         }
 
         // There should only be one deprecation message.
         if (count($messagesArray) > 1) {
-            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = $data;
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = [
+                ...$data,
+                'message' => 'There are multiple deprecation notices for this API.',
+            ];
             return '';
         }
 
@@ -737,7 +758,10 @@ class BreakingChangesComparer
         } else {
             // If the first item in the array isn't a version number, the deprecation is malformed
             // We'll assume the message is present without a version number, though.
-            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = $data;
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = [
+                ...$data,
+                'message' => 'The version number for this deprecation notice is missing or malformed. Should be in the form "1.2.0".',
+            ];
         }
 
         return implode(' ', $messageAsArray);
