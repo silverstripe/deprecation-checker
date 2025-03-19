@@ -12,6 +12,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Terminal;
 use Symfony\Component\Process\Process;
 
+/**
+ * Base class for commands - provides some helper methods and a nicer default output.
+ */
 abstract class BaseCommand extends Command
 {
     protected InputInterface $input;
@@ -31,6 +34,10 @@ abstract class BaseCommand extends Command
         $this->advanceProgressBar($data);
     }
 
+    /**
+     * Set the input and output for this method.
+     * This should be called at the top of execute(), and `$this->input` and `$this->output` should be used.
+     */
     protected function setIO(InputInterface $input, OutputInterface $output): void
     {
         $this->input = $input;

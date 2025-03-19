@@ -11,6 +11,9 @@ use Symfony\Component\Filesystem\Path;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
+/**
+ * Renderer that takes API breaking changes and renders a twig template.
+ */
 class Renderer
 {
     private array $metaDataFrom;
@@ -26,7 +29,10 @@ class Renderer
         $this->parsedProject = $parsedProject;
     }
 
-    public function render(array $breakingApiChanges, string $baseDir, string $filePath)
+    /**
+     * Render the changelog chunk for these API breaking changes
+     */
+    public function render(array $breakingApiChanges, string $baseDir, string $filePath): void
     {
         $this->parsedProject->switchVersion(new Version(BreakingChangesComparer::TO));
         $data = [
@@ -41,6 +47,10 @@ class Renderer
         file_put_contents($filePath, $content);
     }
 
+    /**
+     * Get the API breaking changes in a format that's ready to be used in the template.
+     * This includes flattening the list, creating human-readable messages, and sorting the list.
+     */
     private function getFormattedApiChanges(array $breakingApiChanges): array
     {
         $sortedChanges = [];
@@ -98,6 +108,9 @@ class Renderer
         return $formattedChanges;
     }
 
+    /**
+     * For a given change, get the message that will be displayed in the changelog.
+     */
     private function getMessageForChange(string $changeType, string $apiType, string $apiName, array $apiData): string
     {
         $apiTypeForMessage = $apiData['apiType'];
@@ -146,6 +159,10 @@ class Renderer
         return $message;
     }
 
+    /**
+     * Given a message, convert all FQCN references into API links in the format used by docs.silverstripe.org.
+     * For FQCN that aren't in the "to" version, surround with backticks if $backTickAsFallback is true.
+     */
     private function replaceClassWithApiLink(string $message, bool $backTickAsFallback = true): string
     {
         // Regex uses example from https://www.php.net/manual/en/language.oop5.basic.php#language.oop5.basic.class
@@ -246,12 +263,18 @@ class Renderer
         throw new InvalidArgumentException("Unexpected API type $apiType");
     }
 
+    /**
+     * Get the short (un-namespaced) name for a class.
+     */
     private function getShortClassName(string $className): string
     {
         $parts = explode('\\', $className);
         return array_pop($parts);
     }
 
+    /**
+     * Normalise a value into a consistent representation for the changelog.
+     */
     private function normaliseChangedValue(?string $value, ?string $origValue, string $changeType, string $apiType): string
     {
         if ($value && $changeType === 'renamed' && $apiType === 'param') {

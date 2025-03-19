@@ -22,11 +22,17 @@ use Symfony\Component\Filesystem\Path;
 #[AsCommand('clone', 'Clone the data needed to generate the changelog chunk. Uses the host\'s <info>composer</info> binary.')]
 class CloneCommand extends BaseCommand
 {
+    /**
+     * The name of the directory which will hold the cloned versions of the recipe
+     */
     public const string DIR_CLONE = 'cloned';
 
+    /**
+     * The name of the file which contains metadata about each installed version of the recipe
+     */
     public const string META_FILE = 'changelog-gen-metadata.json';
 
-    private array $recipeShortcuts = [
+    private const array RECIPE_SHORTCUTS = [
         'installer' => 'silverstripe/installer',
         'sink' => 'silverstripe/recipe-kitchen-sink',
         'core' => 'silverstripe/recipe-core',
@@ -39,8 +45,8 @@ class CloneCommand extends BaseCommand
 
         // Make sure the constraints and recipe are valid and exist
         $recipe = $this->input->getArgument('recipe');
-        if (isset($this->recipeShortcuts[$recipe])) {
-            $recipe = $this->recipeShortcuts[$recipe];
+        if (isset(CloneCommand::RECIPE_SHORTCUTS[$recipe])) {
+            $recipe = CloneCommand::RECIPE_SHORTCUTS[$recipe];
         }
         $recipeDetails = $this->getRecipeDetails($recipe);
         $this->validateRecipe($recipeDetails);
@@ -71,7 +77,7 @@ class CloneCommand extends BaseCommand
             InputArgument::REQUIRED,
             'The recipe to clone. Can be any commercially supported Silverstripe CMS recipe in packagist.',
             null,
-            array_keys($this->recipeShortcuts)
+            array_keys(CloneCommand::RECIPE_SHORTCUTS)
         );
         $this->addArgument(
             'fromConstraint',
@@ -93,7 +99,7 @@ class CloneCommand extends BaseCommand
         );
 
         $shortcuts = [];
-        foreach ($this->recipeShortcuts as $shortcut => $recipe) {
+        foreach (CloneCommand::RECIPE_SHORTCUTS as $shortcut => $recipe) {
             $shortcuts[] = "- <fg=blue>$shortcut</> ($recipe)";
         }
         $this->setHelp(
@@ -102,6 +108,9 @@ class CloneCommand extends BaseCommand
         );
     }
 
+    /**
+     * Install a copy of the from and to versions of the recipe into the output dir.
+     */
     private function clone(string $recipe, string $outputDir): void
     {
         $fromConstraint = $this->input->getArgument('fromConstraint');
@@ -113,6 +122,9 @@ class CloneCommand extends BaseCommand
         $this->cloneForConstraint($recipe, $toConstraint, $toDir);
     }
 
+    /**
+     * Given a specific recipe and constraint, install this into the directory.
+     */
     private function cloneForConstraint(string $recipe, string $constraint, string $dir): void
     {
         $this->output->writeln("Preparing to clone '$recipe' with constriant '$constraint' into '$dir'");
@@ -160,6 +172,10 @@ class CloneCommand extends BaseCommand
         $this->output->writeln("Cloned '$recipe' with constriant '$constraint' successfully");
     }
 
+    /**
+     * Get details about a recipe from packagist.
+     * @throws InvalidOptionException if the recipe doesn't exist
+     */
     private function getRecipeDetails(string $recipe): Package
     {
         // Validate recipe exists
@@ -182,6 +198,9 @@ class CloneCommand extends BaseCommand
         return $recipeDetails;
     }
 
+    /**
+     * Validate the recipe is a commercially supported Silverstripe CMS recipe.
+     */
     private function validateRecipe(Package $recipeDetails): void
     {
         if ($recipeDetails->getType() !== 'silverstripe-recipe') {
@@ -196,6 +215,9 @@ class CloneCommand extends BaseCommand
         }
     }
 
+    /**
+     * Validate that the from and to constraints are valid.
+     */
     private function validateConstraints(Package $recipeDetails): void
     {
         $fromConstraint = $this->input->getArgument('fromConstraint');
@@ -211,6 +233,9 @@ class CloneCommand extends BaseCommand
         $this->checkRecipeMatchesConstraint($recipeDetails, $toConstraint);
     }
 
+    /**
+     * Validate that this constraint resolves to an installable version of the recipe.
+     */
     private function checkRecipeMatchesConstraint(Package $recipeDetails, string $constraint): void
     {
         // Validate recipe has a version matching the constraint

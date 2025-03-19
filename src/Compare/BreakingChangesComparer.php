@@ -22,8 +22,14 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class BreakingChangesComparer
 {
+    /**
+     * A string that represents the older of the two versions
+     */
     public const string FROM = 'from';
 
+    /**
+     * A string that represents the newer of the two versions
+     */
     public const string TO = 'to';
 
     /**
@@ -52,17 +58,26 @@ class BreakingChangesComparer
         $this->output = $output;
     }
 
+    /**
+     * Get the list of all API breaking changes that were found.
+     */
     public function getBreakingChanges(): array
     {
         return $this->breakingChanges;
     }
 
+    /**
+     * Get a list of any actions developers need to take to improve the fidelity of the comparison.
+     */
     public function getActionsToTake(): array
     {
         return $this->actionsToTake;
     }
 
-    public function compare(Project $project)
+    /**
+     * Compare the API in two versions of the same project and find API breaking changes.
+     */
+    public function compare(Project $project): void
     {
         $fromProject = $project;
         $fromProject->switchVersion(new Version(BreakingChangesComparer::FROM));
@@ -126,7 +141,7 @@ class BreakingChangesComparer
         string $name,
         FunctionReflection $functionFrom,
         ?FunctionReflection $functionTo
-    ) {
+    ): void {
         $this->output->writeln("Checking globally-scoped function $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $fileFrom = $functionFrom->getFile();
         $fileTo = $functionTo?->getFile();
@@ -175,7 +190,7 @@ class BreakingChangesComparer
      *
      * Also includes checking for actions that need to happen e.g. if the class wasn't deprecated.
      */
-    private function checkClass(string $fqcn, ClassReflection $classFrom, ?ClassReflection $classTo)
+    private function checkClass(string $fqcn, ClassReflection $classFrom, ?ClassReflection $classTo): void
     {
         $apiTypeFrom = match ($classFrom->getCategoryId()) {
             1 => 'class',
@@ -226,12 +241,12 @@ class BreakingChangesComparer
     }
 
     /**
-     * Undocumented function
+     * Check for API breaking changes in all constants for a class.
      *
      * @param array<string,ConstantReflection> $constsFrom
      * @param array<string,ConstantReflection> $constsTo
      */
-    private function checkConstants(string $className, array $constsFrom, array $constsTo, string $module)
+    private function checkConstants(string $className, array $constsFrom, array $constsTo, string $module): void
     {
         // Compare consts that have the same name in both versions or removed in the new one
         foreach ($constsFrom as $constName => $const) {
@@ -258,7 +273,7 @@ class BreakingChangesComparer
         ConstantReflection $constFrom,
         ?ConstantReflection $constTo,
         string $module
-    ) {
+    ): void {
         $this->output->writeln("Checking constant $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         /** @var ClassReflection|null $classFrom */
         $classFrom = $constFrom->getClass();
@@ -288,12 +303,12 @@ class BreakingChangesComparer
     }
 
     /**
-     * Undocumented function
+     * Check for API breaking changes in all properties for a class.
      *
      * @param array<string,PropertyReflection> $propertiesFrom
      * @param array<string,PropertyReflection> $propertiesTo
      */
-    private function checkProperties(string $className, array $propertiesFrom, array $propertiesTo, string $module)
+    private function checkProperties(string $className, array $propertiesFrom, array $propertiesTo, string $module): void
     {
         // Compare properties that have the same name in both versions or removed in the new one
         foreach ($propertiesFrom as $propertyName => $property) {
@@ -320,7 +335,7 @@ class BreakingChangesComparer
         PropertyReflection $propertyFrom,
         ?PropertyReflection $propertyTo,
         string $module
-    ) {
+    ): void {
         $this->output->writeln("Checking property $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $type = $this->getTypeFromReflection($propertyFrom);
         /** @var ClassReflection|null $classFrom */
@@ -358,12 +373,12 @@ class BreakingChangesComparer
     }
 
     /**
-     * Undocumented function
+     * Check for API breaking changes in all methods for a class.
      *
      * @param array<string,MethodReflection> $methodsFrom
      * @param array<string,MethodReflection> $methodsTo
      */
-    private function checkMethods(string $className, array $methodsFrom, array $methodsTo, string $module)
+    private function checkMethods(string $className, array $methodsFrom, array $methodsTo, string $module): void
     {
         // Compare methods that have the same name in both versions or removed in the new one
         foreach ($methodsFrom as $methodName => $method) {
@@ -394,7 +409,7 @@ class BreakingChangesComparer
         MethodReflection $methodFrom,
         ?MethodReflection $methodTo,
         string $module
-    ) {
+    ): void {
         $this->output->writeln("Checking method $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $classFrom = $methodFrom->getClass();
         $fileFrom = method_exists($classFrom ?? '', 'getFile') ? $classFrom->getFile() : null;
@@ -433,10 +448,12 @@ class BreakingChangesComparer
     }
 
     /**
+     * Check for API breaking changes in all parameters for a function or method.
+     *
      * @param array<string,ParameterReflection> $parametersFrom
      * @param array<string,ParameterReflection> $parametersTo
      */
-    private function checkParameters(array $parametersFrom, array $parametersTo, string $module)
+    private function checkParameters(array $parametersFrom, array $parametersTo, string $module): void
     {
         // Compare parameters that have the same name in both versions or removed in the new one
         $count = 0;
@@ -483,7 +500,7 @@ class BreakingChangesComparer
         ParameterReflection $parameterFrom,
         ?ParameterReflection $parameterTo,
         string $module
-    ) {
+    ): void {
         $this->output->writeln("Checking parameter $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         // The getClass() method will check against the method, so we have to check if the method's there or not first.
         $classFrom = $parameterFrom->getMethod() ? $parameterFrom->getClass() : null;
@@ -551,6 +568,10 @@ class BreakingChangesComparer
         }
     }
 
+    /**
+     * Check if the default value for two params are materially different.
+     * Ignores changes that don't affect anything, such as whether single or double quotes are used.
+     */
     private function defaultParamValuesDiffer(mixed $valueFrom, mixed $valueTo): bool
     {
         if ($valueFrom !== $valueTo) {
@@ -645,7 +666,7 @@ class BreakingChangesComparer
         array $dataFrom,
         array $dataTo,
         string $module
-    ) {
+    ): void {
         $type = $this->getTypeFromReflection($reflectionFrom);
         $hintType = null;
         if (in_array($type, ['function', 'method'])) {
@@ -691,6 +712,9 @@ class BreakingChangesComparer
         }
     }
 
+    /**
+     * Get the string deprecation message (excluding version number) if the API is deprecated.
+     */
     private function getDeprecationMessage(string $name, Reflection $reflection, array $data, string $module): string
     {
         $type = $this->getTypeFromReflection($reflection);
@@ -719,6 +743,9 @@ class BreakingChangesComparer
         return implode(' ', $messageAsArray);
     }
 
+    /**
+     * Get the visibility of the API this reflection represents.
+     */
     private function getVisibilityFromReflection(Reflection $reflection): string
     {
         if ($reflection->isPrivate()) {
@@ -733,6 +760,9 @@ class BreakingChangesComparer
         return '';
     }
 
+    /**
+     * Get a "type" reference for the API this reflection represents.
+     */
     private function getTypeFromReflection(Reflection $reflection): string
     {
         $reflectionClass = get_class($reflection);

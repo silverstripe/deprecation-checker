@@ -134,7 +134,7 @@ class GenerateCommand extends BaseCommand
         }
 
         // Compare versions to find breaking changes and actions needed
-        $this->findInfoAboutDeprecations($parsed, $dataDir);
+        $this->findBreakingChanges($parsed, $dataDir);
         if (!empty($this->actionsToTake)) {
             $numActions = $this->getActionsCount();
             $actionsFile = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_ACTIONS);
@@ -186,6 +186,9 @@ class GenerateCommand extends BaseCommand
         $this->setHelp('Also generates useful data e.g. actions that need to be taken to clean up existing deprecations.');
     }
 
+    /**
+     * Gathers metadata about both versions of the recipe
+     */
     private function fetchMetaData(string $dataDir): void
     {
         $this->output->writeln('Collating metadata about the recipe in its two branches.');
@@ -208,6 +211,9 @@ class GenerateCommand extends BaseCommand
         $this->metaDataTo['branch'] = $this->guessBranchFromConstraint($this->metaDataTo['constraint']);
     }
 
+    /**
+     * Identifies supported modules which are relevant for our purposes
+     */
     private function findSupportedModules(): void
     {
         $this->output->writeln('Finding supported modules across both branches.');
@@ -219,6 +225,9 @@ class GenerateCommand extends BaseCommand
         $this->supportedModules = $supportedModules;
     }
 
+    /**
+     * Determine which major release line of Silverstripe CMS this metadata applies to
+     */
     private function getCmsMajor(array $metaData): string
     {
         $composerJson = $this->getJsonFromFile(Path::join($metaData['path'], 'composer.json'), false);
@@ -231,6 +240,11 @@ class GenerateCommand extends BaseCommand
         );
     }
 
+    /**
+     * Parse the PHP code in the supported modules.
+     * If there are errors, they're stored in $this->parseErrors.
+     * The parsed result is represented by the returned project.
+     */
     private function parseModules(string $dataDir): Project
     {
         $this->output->writeln('Parsing modules...');
@@ -318,6 +332,9 @@ class GenerateCommand extends BaseCommand
         return $project;
     }
 
+    /**
+     * Store the relevant parse errors in a file, and return a message about them if there are any.
+     */
     private function handleParseErrors(string $parseErrorFile): string
     {
         if (empty($this->parseErrors)) {
@@ -344,7 +361,10 @@ class GenerateCommand extends BaseCommand
         return '';
     }
 
-    private function findInfoAboutDeprecations(Project $parsedProject, string $dataDir): void
+    /**
+     * Find all breaking changes, as well as any actions needed to improve output accuracy.
+     */
+    private function findBreakingChanges(Project $parsedProject, string $dataDir): void
     {
         $this->output->writeln('Comparing API between versions...');
         $outputDir = Path::join($dataDir, GenerateCommand::DIR_OUTPUT);
@@ -390,6 +410,9 @@ class GenerateCommand extends BaseCommand
         throw new RuntimeException("Constraint '$constraint' does not dissolve easily into a branch number.");
     }
 
+    /**
+     * Given a file that contains JSON content, return the array or object that represents it.
+     */
     private function getJsonFromFile(string $filePath, bool $associative = true): array|stdClass
     {
         if (!is_file($filePath)) {
@@ -407,17 +430,23 @@ class GenerateCommand extends BaseCommand
         return $json;
     }
 
+    /**
+     * Encode some JSON content into a string
+     */
     private function jsonEncode(mixed $content): string
     {
         return json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
+    /**
+     * Get the number of actions that need to be taken.
+     */
     private function getActionsCount(): int
     {
         $count = 0;
-        foreach ($this->actionsToTake as $module => $moduleActions) {
-            foreach ($moduleActions as $actionType => $typeActions) {
-                foreach ($typeActions as $apiType => $apiActions) {
+        foreach ($this->actionsToTake as $moduleActions) {
+            foreach ($moduleActions as $typeActions) {
+                foreach ($typeActions as $apiActions) {
                     $count += count($apiActions);
                 }
             }

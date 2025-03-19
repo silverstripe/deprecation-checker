@@ -52,7 +52,7 @@ class RecipeFinder extends Finder
     /**
      * Reset the dirs property
      */
-    private function resetDirs()
+    private function resetDirs(): void
     {
         // Reset $this->dirs to the list of package paths.
         // This is necessary to ensure we have the dirs for the current version every time we iterate.
