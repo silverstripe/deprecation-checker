@@ -111,14 +111,19 @@ class GenerateCommand extends BaseCommand
             $dataDir = Path::makeAbsolute($dataDir, getcwd());
         }
 
-        $parseErrorFile = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_PARSE_ERRORS);
+        $parseErrorFilePath = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_PARSE_ERRORS);
+        $changelogPath = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_CHANGELOG);
+        $actionsFilePath = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_ACTIONS);
+        $breakingChangesFilePath = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_CHANGES);
+
+        // Remove files from previous run
+        $filesystem = new Filesystem();
+        $filesystem->remove($parseErrorFilePath);
+        $filesystem->remove($changelogPath);
+        $filesystem->remove($actionsFilePath);
+        $filesystem->remove($breakingChangesFilePath);
 
         if ($this->input->getOption('flush')) {
-            $filesystem = new Filesystem();
-            if ($filesystem->exists($parseErrorFile)) {
-                $filesystem->remove($parseErrorFile);
-            }
-            // @TODO remove output contents as well
             $filesystem->remove(Path::join($dataDir, 'cache'));
         }
 
@@ -128,7 +133,7 @@ class GenerateCommand extends BaseCommand
 
         // Parse PHP files in all relevant repositories
         $parsed = $this->parseModules($dataDir);
-        $parseWarning = $this->handleParseErrors($parseErrorFile);
+        $parseWarning = $this->handleParseErrors($parseErrorFilePath);
         if ($parseWarning) {
             $warnings[] = $parseWarning;
         }
@@ -152,7 +157,6 @@ class GenerateCommand extends BaseCommand
 
         // Render changelog chunk
         $this->output->writeln('Rendering...');
-        $changelogPath = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_CHANGELOG);
         $renderer = new Renderer($this->metaDataFrom, $this->metaDataTo, $parsed);
         $renderer->render($this->breakingApiChanges, $dataDir, $changelogPath);
         $this->output->writeln('Rendering complete.');
