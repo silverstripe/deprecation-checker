@@ -225,6 +225,9 @@ class BreakingChangesComparer
             'apiType' => $apiTypeTo,
         ];
 
+        $this->addApiFromExtensions($fqcn, $classFrom, $dataFrom, $module);
+        $this->addApiFromExtensions($fqcn, $classTo, $dataTo, $module);
+
         $isMissing = $this->checkForMissingApi($fqcn, $classFrom, $classTo, $dataFrom, $dataTo, $module);
         if ($isMissing) {
             return;
@@ -242,7 +245,65 @@ class BreakingChangesComparer
 
         $this->checkConstants($fqcn, $classFrom->getConstants(true), $classTo->getConstants(true), $module);
         $this->checkProperties($fqcn, $classFrom->getProperties(true), $classTo->getProperties(true), $module);
-        $this->checkMethods($fqcn, $classFrom->getMethods(true), $classTo->getMethods(true), $module);
+        $this->checkMethods($fqcn, $classFrom->getMethods(true), $classTo->getMethods(true), $classTo, $module);
+    }
+
+    /**
+     * Add public methods and configuration from extensions.
+     * API in extensions that are applied to an extension directly in the class are considered part of that class's API.
+     */
+    private function addApiFromExtensions(string $name, ?ClassReflection $class, array $data, string $module): void
+    {
+        /** @var PropertyReflection $extensionsProperty */
+        $extensionsProperty = $class?->getProperties()['extensions'] ?? null;
+        if (!$extensionsProperty) {
+            return;
+        }
+        $type = $this->getTypeFromReflection($class);
+        $ref = $this->getRefFromReflection($class);
+        $extensionsRawValue = $extensionsProperty->getDefault();
+        if (empty($extensionsRawValue['items'])) {
+            return;
+        }
+        $classProperties = $class->getProperties();
+        foreach ($extensionsRawValue['items'] ?? [] as $extensionRaw) {
+            $value = $extensionRaw['value'];
+            // This is the type for PhpParser\Node\Expr\ClassConstFetch i.e. SomeClass::class
+            if ($value['nodeType'] !== 'Expr_ClassConstFetch') {
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
+                    ...$data,
+                    'message' => 'The value for the $extensions configuration property has an unexpected format or type.',
+                ];
+                continue;
+            }
+            // Get reflection object for the extension class
+            $extensionFQCN = implode('\\', $value['class']['parts']);
+            $extension = $class->getProject()->getClass($extensionFQCN);
+            if (!$this->apiExists($extension)) {
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
+                    ...$data,
+                    'message' => "The '$extensionFQCN' class referenced in the \$extensions configuration property doesn't exist.",
+                ];
+                continue;
+            }
+            // Add public methods and config properties if the class doesn't have them already.
+            /** @var MethodReflection $method */
+            foreach ($extension->getMethods(true) as $method) {
+                if ($method->isPublic() && !$class->getMethod($method->getName())) {
+                    $extensionMethod = ExtensionMethodReflection::fromArray($class->getProject(), $method->toArray());
+                    $extensionMethod->setExtensionClass($extension);
+                    $class->addMethod($extensionMethod);
+                }
+            }
+            /** @var PropertyReflection $method */
+            foreach ($extension->getProperties(true) as $property) {
+                if ($property->isPrivate() && $property->isStatic() && !array_key_exists($property->getName(), $classProperties)) {
+                    $extensionConfig = ExtensionConfigReflection::fromArray($class->getProject(), $property->toArray());
+                    $extensionConfig->setExtensionClass($extension);
+                    $class->addProperty($extensionConfig);
+                }
+            }
+        }
     }
 
     /**
@@ -255,6 +316,7 @@ class BreakingChangesComparer
     {
         // Compare consts that have the same name in both versions or removed in the new one
         foreach ($constsFrom as $constName => $const) {
+            // Skip comparison where the API used to be in a parent class or explicitly in a trait and wasn't overridden
             if ($const->getClass()?->getName() !== $className) {
                 continue;
             }
@@ -322,6 +384,7 @@ class BreakingChangesComparer
     {
         // Compare properties that have the same name in both versions or removed in the new one
         foreach ($propertiesFrom as $propertyName => $property) {
+            // Skip comparison where the API used to be in a parent class or explicitly in a trait and wasn't overridden
             if ($property->getClass()?->getName() !== $className) {
                 continue;
             }
@@ -394,11 +457,18 @@ class BreakingChangesComparer
      * @param array<string,MethodReflection> $methodsFrom
      * @param array<string,MethodReflection> $methodsTo
      */
-    private function checkMethods(string $className, array $methodsFrom, array $methodsTo, string $module): void
+    private function checkMethods(string $className, array $methodsFrom, array $methodsTo, ClassReflection $classTo, string $module): void
     {
         // Compare methods that have the same name in both versions or removed in the new one
         foreach ($methodsFrom as $methodName => $method) {
-            if ($method->getClass()?->getName() !== $className) {
+            $methodClass = $method->getClass();
+            // Skip comparison where the API used to be in a parent class or explicitly in a trait and wasn't overridden
+            if ($methodClass?->getName() !== $className) {
+                continue;
+            }
+            // Skip comparison where the API used to and still does belong on the parent class
+            // i.e. even if it is explicitly overridden in the subclass, only the superclass needs to report the changes.
+            if ($methodClass?->getParentMethod($methodName) && $classTo->getParentMethod($methodName)) {
                 continue;
             }
             $this->checkMethod($methodName, $method, $methodsTo[$methodName] ?? null, $module);
@@ -624,7 +694,7 @@ class BreakingChangesComparer
      * Checks to see if API was either removed, or became internal in the new version.
      * Also checks for any actions that need to be taken, e.g. deprecate in the old version.
      *
-     * @return bool True if the API is missing in the new version.
+     * @return bool True if further comparisons should be skipped (e.g. the API is missing in the new version)
      */
     private function checkForMissingApi(
         string $name,
@@ -634,6 +704,12 @@ class BreakingChangesComparer
         array $dataTo,
         string $module
     ): bool {
+        // Skip check if the old version came from an extension.
+        // It'll be checked against the extension itself instead.
+        if ($reflectionFrom instanceof ExtensionReflection) {
+            return true;
+        }
+
         $type = $this->getTypeFromReflection($reflectionFrom);
         $ref = $this->getRefFromReflection($reflectionFrom);
 
@@ -826,7 +902,9 @@ class BreakingChangesComparer
             ClassReflection::class => 'class',
             ParameterReflection::class => 'param',
             MethodReflection::class => 'method',
+            ExtensionMethodReflection::class => 'method',
             PropertyReflection::class => ($reflection->isPrivate() && $reflection->isStatic()) ? 'config' : 'property',
+            ExtensionConfigReflection::class => 'config',
             ConstantReflection::class => 'const',
             FunctionReflection::class => 'function',
             default => throw new InvalidArgumentException("Unexpected reflection type: $reflectionClass"),
@@ -852,6 +930,7 @@ class BreakingChangesComparer
             ExtensionMethodReflection::class => "::{$baseName}()",
             MethodReflection::class => "::{$baseName}()",
             PropertyReflection::class => "->{$baseName}",
+            ExtensionConfigReflection::class => "->{$baseName}",
             ConstantReflection::class => "::{$baseName}",
             ParameterReflection::class => "\${$baseName}",
             default => throw new InvalidArgumentException("Unexpected reflection type: $reflectionClass"),
