@@ -40,7 +40,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 
-#[AsCommand('generate', 'Generate the deprecation section of a changelog')]
+#[AsCommand('generate', 'Generate the deprecation section of a changelog and additional data files')]
 class GenerateCommand extends BaseCommand
 {
     public const string DIR_OUTPUT = 'output';
@@ -119,6 +119,7 @@ class GenerateCommand extends BaseCommand
             if ($filesystem->exists($parseErrorFile)) {
                 $filesystem->remove($parseErrorFile);
             }
+            // @TODO remove output contents as well
             $filesystem->remove(Path::join($dataDir, 'cache'));
         }
 

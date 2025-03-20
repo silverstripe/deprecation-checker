@@ -84,9 +84,9 @@ class Renderer
             ];
             foreach ($moduleChanges as $changeType => $typeChanges) {
                 foreach ($typeChanges as $apiType => $apiChanges) {
-                    foreach ($apiChanges as $apiName => $apiData) {
-                        $message = $this->getMessageForChange($changeType, $apiType, $apiName, $apiData);
-                        $sortedChanges[$module][$changeType][$apiType][$apiName] = $message;
+                    foreach ($apiChanges as $apiRef => $apiData) {
+                        $message = $this->getMessageForChange($changeType, $apiType, $apiData);
+                        $sortedChanges[$module][$changeType][$apiType][$apiRef] = $message;
                     }
                     // asort over ksort because we want the FQCN of the API to be the sort order, not just e.g. the method name on its own.
                     asort($sortedChanges[$module][$changeType][$apiType]);
@@ -97,9 +97,9 @@ class Renderer
         // Now that everything's in the right order, flatted down so we have one array of messages per module.
         $formattedChanges = [];
         foreach ($sortedChanges as $module => $moduleChanges) {
-            foreach ($moduleChanges as $changeType => $typeChanges) {
-                foreach ($typeChanges as $apiType => $apiChanges) {
-                    foreach ($apiChanges as $apiName => $message) {
+            foreach ($moduleChanges as $typeChanges) {
+                foreach ($typeChanges as $apiChanges) {
+                    foreach ($apiChanges as $message) {
                         $formattedChanges[$module][] = $message;
                     }
                 }
@@ -111,10 +111,10 @@ class Renderer
     /**
      * For a given change, get the message that will be displayed in the changelog.
      */
-    private function getMessageForChange(string $changeType, string $apiType, string $apiName, array $apiData): string
+    private function getMessageForChange(string $changeType, string $apiType, array $apiData): string
     {
         $apiTypeForMessage = $apiData['apiType'];
-        $apiReference = $this->getApiReference($apiType, $apiName, $apiData, $changeType);
+        $apiReference = $this->getApiReference($apiType, $apiData, $changeType);
         $deprecationMessage = $apiData['message'] ?? null;
         $from = $this->normaliseChangedValue(
             $apiData[BreakingChangesComparer::FROM] ?? null,
@@ -182,18 +182,18 @@ class Renderer
                 $rest = $match['rest'] ?? null;
                 if ($rest) {
                     if (preg_match('/^::(.*)\(\)$/', $rest, $restMatch)) {
-                        return $this->getApiReference('method', $restMatch[1], ['class' => $class]);
+                        return $this->getApiReference('method', ['name' => $restMatch[1], 'class' => $class]);
                     } elseif (preg_match('/^::(.*)$/', $rest, $restMatch)) {
-                        return $this->getApiReference('const', $restMatch[1], ['class' => $class]);
+                        return $this->getApiReference('const', ['name' => $restMatch[1], 'class' => $class]);
                     } elseif (preg_match('/^.(.*)/', $rest, $restMatch)) {
-                        return $this->getApiReference('config', $restMatch[1], ['class' => $class]);
+                        return $this->getApiReference('config', ['name' => $restMatch[1], 'class' => $class]);
                     } elseif (preg_match('/^->(.*)/', $rest, $restMatch)) {
-                        return $this->getApiReference('property', $restMatch[1], ['class' => $class]);
+                        return $this->getApiReference('property', ['name' => $restMatch[1], 'class' => $class]);
                     } else {
                         throw new LogicException("Unexpected API reference in deprecation notice: '{$match[0]}'");
                     }
                 }
-                return $this->getApiReference('class', $class);
+                return $this->getApiReference('class', ['name' => $class]);
             },
             $message
         );
@@ -202,8 +202,9 @@ class Renderer
     /**
      * Get a documentation markdown friendly string to reference a specific piece of API
      */
-    private function getApiReference(string $apiType, string $apiName, array $apiData = [], string $changeType = ''): string
+    private function getApiReference(string $apiType, array $apiData = [], string $changeType = ''): string
     {
+        $apiName = $apiData['name'];
         if ($apiType === 'class') {
             if ($changeType === 'removed') {
                 return "`{$apiName}`";
@@ -252,11 +253,9 @@ class Renderer
         if ($apiType === 'param') {
             $function = $apiData['function'];
             if ($function) {
-                $parent = $this->getApiReference('function', $function);
+                $parent = $this->getApiReference('function', ['name' => $function]);
             } else {
-                $method = $apiData['method'];
-                $class = $apiData['class'];
-                $parent = $this->getApiReference('method', $method, ['class' => $class]);
+                $parent = $this->getApiReference('method', ['name' => $apiData['method'], 'class' => $apiData['class']]);
             }
             return "`\$$apiName` in $parent";
         }

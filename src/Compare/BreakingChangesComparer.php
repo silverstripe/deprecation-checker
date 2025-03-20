@@ -147,11 +147,13 @@ class BreakingChangesComparer
         $fileTo = $functionTo?->getFile();
         $module = $this->getModuleForFile($fileFrom);
         $dataFrom = [
+            'name' => $name,
             'file' => $fileFrom,
             'line' => $functionFrom->getLine(),
             'apiType' => 'function',
         ];
         $dataTo = [
+            'name' => $name,
             'file' => $fileTo,
             'line' => $functionTo?->getLine(),
             'apiType' => 'function',
@@ -162,12 +164,13 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($name, $functionFrom, $functionTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($functionFrom, $functionTo, $dataFrom, $dataTo, $module);
 
         // Changed whether it's passed by reference (preceeded with `&`) or not
         if ($functionFrom->isByRef() !== $functionTo->isByRef()) {
             $type = $this->getTypeFromReflection($functionFrom);
-            $this->breakingChanges[$module]['returnByRef'][$type][$name] = [
+            $ref = $this->getRefFromReflection($functionTo);
+            $this->breakingChanges[$module]['returnByRef'][$type][$ref] = [
                 ...$dataTo,
                 'isNow' => $functionTo->isByRef(),
             ];
@@ -210,11 +213,13 @@ class BreakingChangesComparer
         $module = $this->getModuleForFile($fileFrom);
         $type = $this->getTypeFromReflection($classFrom);
         $dataFrom = [
+            'name' => $fqcn,
             'file' => $fileFrom,
             'line' => $classFrom->getLine(),
             'apiType' => $apiTypeFrom,
         ];
         $dataTo = [
+            'name' => $fqcn,
             'file' => $fileTo,
             'line' => $classTo?->getLine(),
             'apiType' => $apiTypeTo,
@@ -225,7 +230,7 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($fqcn, $classFrom, $classTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($classFrom, $classTo, $dataFrom, $dataTo, $module);
 
         // Class-like has changed what type of class-like it is (e.g. from class to interface)
         if ($classFrom->getCategoryId() !== $classTo->getCategoryId()) {
@@ -277,8 +282,9 @@ class BreakingChangesComparer
         $this->output->writeln("Checking constant $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         /** @var ClassReflection|null $classFrom */
         $classFrom = $constFrom->getClass();
-        $fileFrom = method_exists($classFrom ?? '', 'getFile') ? $classFrom->getFile() : null;
+        $fileFrom = $classFrom?->getFile() ?? null;
         $dataFrom = [
+            'name' => $name,
             'file' => $fileFrom,
             'line' => $constFrom->getLine(),
             'class' => $classFrom?->getName(),
@@ -286,11 +292,15 @@ class BreakingChangesComparer
         ];
         /** @var ClassReflection|null $classTo */
         $classTo = $constTo?->getClass();
-        $fileTo = method_exists($classTo ?? '', 'getFile') ? $classTo->getFile() : null;
+        $fileTo = $classTo?->getFile() ?? null;
         $dataTo = [
+            'name' => $name,
             'file' => $fileTo,
             'line' => $constTo?->getLine(),
-            'class' => $classTo?->getName(),
+            // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
+            // It's possible for example that the code was refactored into a trait in the new version which would
+            // result in $classTo being the trait, NOT the class we're actually looking at.
+            'class' => $classFrom?->getName(),
             'apiType' => 'constant',
         ];
 
@@ -299,7 +309,7 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($name, $constFrom, $constTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($constFrom, $constTo, $dataFrom, $dataTo, $module);
     }
 
     /**
@@ -340,8 +350,9 @@ class BreakingChangesComparer
         $type = $this->getTypeFromReflection($propertyFrom);
         /** @var ClassReflection|null $classFrom */
         $classFrom = $propertyFrom->getClass();
-        $fileFrom = method_exists($classFrom ?? '', 'getFile') ? $classFrom->getFile() : null;
+        $fileFrom = $classFrom?->getFile() ?? null;
         $dataFrom = [
+            'name' => $name,
             'file' => $fileFrom,
             'line' => $propertyFrom->getLine(),
             'class' => $classFrom?->getName(),
@@ -349,11 +360,15 @@ class BreakingChangesComparer
         ];
         /** @var ClassReflection|null $classTo */
         $classTo = $propertyTo?->getClass();
-        $fileTo = method_exists($classTo ?? '', 'getFile') ? $classTo->getFile() : null;
+        $fileTo = $classTo?->getFile() ?? null;
         $dataTo = [
+            'name' => $name,
             'file' => $fileTo,
             'line' => $propertyTo?->getLine(),
-            'class' => $classTo?->getName(),
+            // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
+            // It's possible for example that the code was refactored into a trait in the new version which would
+            // result in $classTo being the trait, NOT the class we're actually looking at.
+            'class' => $classFrom?->getName(),
             'apiType' => ($propertyTo?->isPrivate() && $propertyTo?->isStatic()) ? 'config' : 'property',
         ];
 
@@ -362,10 +377,11 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($name, $propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
 
         if ($propertyFrom->isReadOnly() !== $propertyTo->isReadOnly()) {
-            $this->breakingChanges[$module]['readonly'][$type][$name] = [
+            $ref = $this->getRefFromReflection($propertyTo);
+            $this->breakingChanges[$module]['readonly'][$type][$ref] = [
                 ...$dataTo,
                 'isNow' => $propertyTo->isReadOnly(),
             ];
@@ -412,19 +428,24 @@ class BreakingChangesComparer
     ): void {
         $this->output->writeln("Checking method $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $classFrom = $methodFrom->getClass();
-        $fileFrom = method_exists($classFrom ?? '', 'getFile') ? $classFrom->getFile() : null;
+        $fileFrom = $classFrom?->getFile() ?? null;
         $dataFrom = [
+            'name' => $name,
             'file' => $fileFrom,
             'line' => $methodFrom->getLine(),
             'class' => $classFrom?->getName(),
             'apiType' => 'method',
         ];
         $classTo = $methodTo?->getClass();
-        $fileTo = method_exists($classTo ?? '', 'getFile') ? $classTo->getFile() : null;
+        $fileTo = $classTo?->getFile() ?? null;
         $dataTo = [
+            'name' => $name,
             'file' => $fileTo,
             'line' => $methodTo?->getLine(),
-            'class' => $classTo?->getName(),
+            // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
+            // It's possible for example that the code was refactored into a trait in the new version which would
+            // result in $classTo being the trait, NOT the class we're actually looking at.
+            'class' => $classFrom?->getName(),
             'apiType' => 'method',
         ];
 
@@ -433,12 +454,13 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($name, $methodFrom, $methodTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($methodFrom, $methodTo, $dataFrom, $dataTo, $module);
 
         // Changed whether it's passed by reference (preceeded with `&`) or not
         if ($methodFrom->isByRef() !== $methodTo->isByRef()) {
-            $type = $this->getTypeFromReflection($methodFrom);
-            $this->breakingChanges[$module]['returnByRef'][$type][$name] = [
+            $type = $this->getTypeFromReflection($methodTo);
+            $ref = $this->getRefFromReflection($methodTo);
+            $this->breakingChanges[$module]['returnByRef'][$type][$ref] = [
                 ...$dataTo,
                 'isNow' => $methodTo->isByRef(),
             ];
@@ -473,8 +495,10 @@ class BreakingChangesComparer
         $newParams = array_diff_key($parametersTo, $parametersFrom, $notNew);
         $type = null;
         foreach ($newParams as $paramName => $newParam) {
+            $ref = $this->getRefFromReflection($newParam);
             $type ??= $this->getTypeFromReflection($newParam);
-            $this->breakingChanges[$module]['new'][$type][$paramName] = [
+            $this->breakingChanges[$module]['new'][$type][$ref] = [
+                'name' => $paramName,
                 'hint' => $this->getHintStringWithFQCN($newParam->getHint(), $newParam->isIntersectionType()),
                 // Because of https://github.com/code-lts/doctum/issues/76 we can't always rely on the FQCN resolution above.
                 'hintOrig' => $newParam->getHintAsString(),
@@ -507,6 +531,7 @@ class BreakingChangesComparer
         $fileFrom = $classFrom ? $classFrom->getFile() : $parameterFrom->getFunction()?->getFile();
         $type = $this->getTypeFromReflection($parameterFrom);
         $dataFrom = [
+            'name' => $name,
             'file' => $fileFrom,
             'line' => $parameterFrom->getLine(),
             'function' => $parameterFrom->getFunction()?->getName(),
@@ -517,11 +542,15 @@ class BreakingChangesComparer
         $classTo = $parameterTo?->getMethod() ? $parameterTo?->getClass() : null;
         $fileTo = $classTo ? $classTo->getFile() : $parameterTo?->getFunction()?->getFile();
         $dataTo = [
+            'name' => $name,
             'file' => $fileTo,
             'line' => $parameterTo?->getLine(),
             'function' => $parameterTo?->getFunction()?->getName(),
             'method' => $parameterTo?->getMethod()?->getName(),
-            'class' => $classTo?->getName(),
+            // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
+            // It's possible for example that the code was refactored into a trait in the new version which would
+            // result in $classTo being the trait, NOT the class we're actually looking at.
+            'class' => $classFrom?->getName(),
             'apiType' => 'parameter',
         ];
 
@@ -531,11 +560,12 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($name, $parameterFrom, $parameterTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($parameterFrom, $parameterTo, $dataFrom, $dataTo, $module);
 
         // Check if param was renamed
+        $ref = $this->getRefFromReflection($parameterTo);
         if ($parameterTo->getName() !== $name) {
-            $this->breakingChanges[$module]['renamed'][$type][$name] = [
+            $this->breakingChanges[$module]['renamed'][$type][$ref] = [
                 ...$dataTo,
                 BreakingChangesComparer::FROM => $name,
                 BreakingChangesComparer::TO => $parameterTo->getName(),
@@ -544,7 +574,7 @@ class BreakingChangesComparer
 
         // Changed whether it's variable-length (preceded with `...`) or not
         if ($parameterFrom->getVariadic() !== $parameterTo->getVariadic()) {
-            $this->breakingChanges[$module]['variadic'][$type][$name] = [
+            $this->breakingChanges[$module]['variadic'][$type][$ref] = [
                 ...$dataTo,
                 'isNow' => $parameterTo->getVariadic(),
             ];
@@ -552,7 +582,7 @@ class BreakingChangesComparer
 
         // Changed whether it's passed by reference (preceeded with `&`) or not
         if ($parameterFrom->isByRef() !== $parameterTo->isByRef()) {
-            $this->breakingChanges[$module]['passByRef'][$type][$name] = [
+            $this->breakingChanges[$module]['passByRef'][$type][$ref] = [
                 ...$dataTo,
                 'isNow' => $parameterTo->isByRef(),
             ];
@@ -560,7 +590,7 @@ class BreakingChangesComparer
 
         // Change to the default value
         if ($this->defaultParamValuesDiffer($parameterFrom->getDefault(), $parameterTo->getDefault())) {
-            $this->breakingChanges[$module]['default'][$type][$name] = [
+            $this->breakingChanges[$module]['default'][$type][$ref] = [
                 ...$dataTo,
                 BreakingChangesComparer::FROM => $parameterFrom->getDefault(),
                 BreakingChangesComparer::TO => $parameterTo->getDefault(),
@@ -605,6 +635,7 @@ class BreakingChangesComparer
         string $module
     ): bool {
         $type = $this->getTypeFromReflection($reflectionFrom);
+        $ref = $this->getRefFromReflection($reflectionFrom);
 
         // Check if API went missing
         if ($reflectionTo === null || $dataTo['file'] === null) {
@@ -615,13 +646,13 @@ class BreakingChangesComparer
             // Mark whether we still need to deprecate it, and note the breaking change.
             // Note params can't be marked deprecated.
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
-                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = [
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
                     ...$dataFrom,
                     'message' => 'This API was removed, but hasn\'t been deprecated.',
                 ];
             }
             // Note the breaking change.
-            $this->breakingChanges[$module]['removed'][$type][$name] = [
+            $this->breakingChanges[$module]['removed'][$type][$ref] = [
                 ...$dataFrom,
                 'message' => $this->getDeprecationMessage($name, $reflectionFrom, $dataFrom, $module),
             ];
@@ -631,19 +662,19 @@ class BreakingChangesComparer
         // API didn't used to be @internal, but it is now (removes it from our public API surface)
         if (!$reflectionFrom->isInternal() && $reflectionTo->isInternal()) {
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
-                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$name] = [
+                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
                     ...$dataFrom,
                     'message' => 'This API was made @internal, but hasn\'t been deprecated.',
                 ];
             }
             if ($type === 'config') {
                 // @internal config is literally removed, because it won't be picked up as config anymore.
-                $this->breakingChanges[$module]['removed'][$type][$name] = [
+                $this->breakingChanges[$module]['removed'][$type][$ref] = [
                     ...$dataFrom,
                     'message' => $this->getDeprecationMessage($name, $reflectionFrom, $dataFrom, $module),
                 ];
             } else {
-                $this->breakingChanges[$module]['internal'][$type][$name] = [
+                $this->breakingChanges[$module]['internal'][$type][$ref] = [
                     ...$dataFrom,
                     'message' => $this->getDeprecationMessage($name, $reflectionFrom, $dataFrom, $module),
                 ];
@@ -656,7 +687,7 @@ class BreakingChangesComparer
         // Note we don't care about API that used to be deprecated but no longer is,
         // or which is deprecated in the new version but not the old.
         if ($type !== 'param' && $reflectionFrom->isDeprecated() && $reflectionTo->isDeprecated()) {
-            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_REMOVE][$type][$name] = [
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_REMOVE][$type][$ref] = [
                 ...$dataTo,
                 'message' => 'This API is deprecated, but hasn\'t been removed.',
             ];
@@ -669,7 +700,6 @@ class BreakingChangesComparer
      * Checks to see if the signature changed for an API (e.g. change of type or became `final`)
      */
     private function checkForSignatureChanges(
-        string $name,
         Reflection $reflectionFrom,
         ?Reflection $reflectionTo,
         array $dataFrom,
@@ -677,6 +707,7 @@ class BreakingChangesComparer
         string $module
     ): void {
         $type = $this->getTypeFromReflection($reflectionFrom);
+        $ref = $this->getRefFromReflection($reflectionFrom);
         $hintType = null;
         if (in_array($type, ['function', 'method'])) {
             $hintType = 'returnType';
@@ -689,7 +720,7 @@ class BreakingChangesComparer
         if ($hintType !== null && $reflectionFrom->getHintAsString() !== $reflectionTo->getHintAsString()) {
             $isIntersectionTypeFrom = method_exists($reflectionFrom, 'isIntersectionType') ? $reflectionFrom->isIntersectionType() : false;
             $isIntersectionTypeTo = method_exists($reflectionTo, 'isIntersectionType') ? $reflectionTo->isIntersectionType() : false;
-            $this->breakingChanges[$module][$hintType][$type][$name] = [
+            $this->breakingChanges[$module][$hintType][$type][$ref] = [
                 ...$dataTo,
                 BreakingChangesComparer::FROM => $this->getHintStringWithFQCN($reflectionFrom->getHint(), $isIntersectionTypeFrom),
                 BreakingChangesComparer::TO => $this->getHintStringWithFQCN($reflectionTo->getHint(), $isIntersectionTypeTo),
@@ -703,7 +734,7 @@ class BreakingChangesComparer
         $visibilityFrom = $this->getVisibilityFromReflection($reflectionFrom);
         $visibilityTo = $this->getVisibilityFromReflection($reflectionTo);
         if ($visibilityFrom !== $visibilityTo) {
-            $this->breakingChanges[$module]['visibility'][$type][$name] = [
+            $this->breakingChanges[$module]['visibility'][$type][$ref] = [
                 ...$dataTo,
                 BreakingChangesComparer::FROM => $visibilityFrom,
                 BreakingChangesComparer::TO => $visibilityTo,
@@ -712,12 +743,12 @@ class BreakingChangesComparer
 
         // Check for becoming final
         if (!$reflectionFrom->isFinal() && $reflectionTo->isFinal()) {
-            $this->breakingChanges[$module]['final'][$type][$name] = $dataTo;
+            $this->breakingChanges[$module]['final'][$type][$ref] = $dataTo;
         }
 
         // Check for becoming abstract
         if (!$reflectionFrom->isAbstract() && $reflectionTo->isAbstract()) {
-            $this->breakingChanges[$module]['abstract'][$type][$name] = $dataTo;
+            $this->breakingChanges[$module]['abstract'][$type][$ref] = $dataTo;
         }
     }
 
@@ -727,6 +758,7 @@ class BreakingChangesComparer
     private function getDeprecationMessage(string $name, Reflection $reflection, array $data, string $module): string
     {
         $type = $this->getTypeFromReflection($reflection);
+        $ref = $this->getRefFromReflection($reflection);
         $messagesArray = $reflection->getDeprecated();
 
         // Params don't get deprecation messages, and anything that isn't deprecated obviously won't have a message.
@@ -736,7 +768,7 @@ class BreakingChangesComparer
 
         // If there's no message at all, we need to add one.
         if (empty($messagesArray)) {
-            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = [
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$ref] = [
                 ...$data,
                 'message' => 'The deprecation annotation is missing a message.',
             ];
@@ -745,7 +777,7 @@ class BreakingChangesComparer
 
         // There should only be one deprecation message.
         if (count($messagesArray) > 1) {
-            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = [
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$ref] = [
                 ...$data,
                 'message' => 'There are multiple deprecation notices for this API.',
             ];
@@ -758,7 +790,7 @@ class BreakingChangesComparer
         } else {
             // If the first item in the array isn't a version number, the deprecation is malformed
             // We'll assume the message is present without a version number, though.
-            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$name] = [
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$ref] = [
                 ...$data,
                 'message' => 'The version number for this deprecation notice is missing or malformed. Should be in the form "1.2.0".',
             ];
@@ -802,6 +834,53 @@ class BreakingChangesComparer
     }
 
     /**
+     * Get a unique reference for the API this reflection represents to avoid collisions in array keys.
+     */
+    private function getRefFromReflection(Reflection $reflection): string
+    {
+        $baseName = $reflection->getName();
+        if ($reflection instanceof ClassReflection) {
+            return $baseName;
+        }
+
+        if ($reflection instanceof FunctionReflection) {
+            return "{$baseName}()";
+        }
+
+        $reflectionClass = get_class($reflection);
+        $baseName = match ($reflectionClass) {
+            ExtensionMethodReflection::class => "::{$baseName}()",
+            MethodReflection::class => "::{$baseName}()",
+            PropertyReflection::class => "->{$baseName}",
+            ConstantReflection::class => "::{$baseName}",
+            ParameterReflection::class => "\${$baseName}",
+            default => throw new InvalidArgumentException("Unexpected reflection type: $reflectionClass"),
+        };
+
+        if ($reflection instanceof ParameterReflection) {
+            $function = $reflection->getFunction();
+            if ($this->apiExists($function)) {
+                return $function->getName() . "({$baseName})";
+            }
+            // If there was no function there should be a method
+            $method = $reflection->getMethod();
+            if ($method) {
+                return rtrim($this->getRefFromReflection($method), ')') . "({$baseName})";
+            }
+            // In the off chance there's no method, just use the base name alone.
+            return $baseName;
+        }
+
+        // Everything else should belong to a class, but if not just use the base name alone
+        $class = $reflection->getClass();
+        if (!$class) {
+            return $baseName;
+        }
+
+        return $class->getName() . $baseName;
+    }
+
+    /**
      * Gets the packagist name for the module the file lives in.
      * @throws LogicException if the module name can't be found.
      */
@@ -831,5 +910,21 @@ class BreakingChangesComparer
         $separator = $isIntersectionType ? '&' : '|';
         $x = implode($separator, $hintParts);
         return $x;
+    }
+
+    /**
+     * Check if API represented by this reflection actually exists
+     */
+    private function apiExists(Reflection|false|null $reflection): bool
+    {
+        if (!$reflection) {
+            return false;
+        }
+
+        if (method_exists($reflection, 'getFile') && $reflection->getFile() === null) {
+            return false;
+        }
+
+        return true;
     }
 }
