@@ -11,5 +11,6 @@ $application = new Application('Silverstripe Deprecation Changelog Generator', I
 $application->addCommands([
     new Command\CloneCommand(),
     new Command\GenerateCommand(),
+    new Command\PrintActionsCommand(),
 ]);
 $application->run();
