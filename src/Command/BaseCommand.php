@@ -2,6 +2,8 @@
 
 namespace Silverstripe\DeprecationChangelogGenerator\Command;
 
+use RuntimeException;
+use stdClass;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Helper;
 use Symfony\Component\Console\Helper\ProcessHelper;
@@ -124,5 +126,33 @@ abstract class BaseCommand extends Command
         $this->progressBar?->finish();
         $this->clearProgressBar();
         $this->progressBar = null;
+    }
+
+    /**
+     * Given a file that contains JSON content, return the array or object that represents it.
+     */
+    protected function getJsonFromFile(string $filePath, bool $associative = true): array|stdClass
+    {
+        if (!is_file($filePath)) {
+            throw new RuntimeException("'$filePath' does not exist or is not a file.");
+        }
+
+        $fileContents = file_get_contents($filePath);
+        $json = json_decode($fileContents, $associative);
+
+        if ($json === null) {
+            $error = json_last_error_msg();
+            throw new RuntimeException("$filePath has invalid JSON: $error");
+        }
+
+        return $json;
+    }
+
+    /**
+     * Encode some JSON content into a string
+     */
+    protected function jsonEncode(mixed $content): string
+    {
+        return json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 }
