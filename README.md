@@ -32,3 +32,4 @@ This tool uses the `composer` binary on your machine directly, so you shouldn't 
 - The parsing library used doesn't currently pick up on [enums](https://www.php.net/manual/en/language.types.enumerations.php)
 - The parsing library used doesn't currently pick up on globally-scoped consts
 - Due to https://github.com/code-lts/doctum/issues/76 types may not evaluate completely to FQCN
+- It's not feasible to get config from `get_extra_config()` for comparing.

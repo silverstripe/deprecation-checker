@@ -58,6 +58,13 @@ class Renderer
         $apiTypeOrder = [
             'class' => [],
             'method' => [],
+            'db' => [],
+            'fixed_fields' => [],
+            'has_one' => [],
+            'has_many' => [],
+            'many_many' => [],
+            'belongs_to' => [],
+            'belongs_many_many' => [],
             'config' => [],
             'property' => [],
             'const' => [],
@@ -72,16 +79,19 @@ class Renderer
                 'visibility' => $apiTypeOrder,
                 'returnType' => $apiTypeOrder,
                 'type' => $apiTypeOrder,
-                'renamed' => $apiTypeOrder,
-                'new' => $apiTypeOrder, // params only
+                'renamed' => [], // params only
+                'new' => [], // params only
                 'abstract' => $apiTypeOrder,
                 'final' => $apiTypeOrder,
                 'returnByRef' => $apiTypeOrder,
-                'passByRef' => $apiTypeOrder,
-                'readonly' => $apiTypeOrder,
-                'variadic' => $apiTypeOrder,
-                'default-array' => $apiTypeOrder,
+                'passByRef' => [], // params only
+                'readonly' => [], // properties only
+                'variadic' => [], // params only
+                'default-array' => [], // properties only
                 'default' => $apiTypeOrder,
+                'multirelational' => [], // has_one only
+                'through' =>  [], // many_many only
+                'through-data' =>  [], // many_many only
             ];
             foreach ($moduleChanges as $changeType => $typeChanges) {
                 foreach ($typeChanges as $apiType => $apiChanges) {
@@ -138,6 +148,7 @@ class Renderer
             'default' => "Changed default value for $apiTypeForMessage $apiReference from $from to $to",
             'default-array' => "Changed default value for $apiTypeForMessage $apiReference - array values have changed",
             'final' => ucfirst($apiTypeForMessage) . " $apiReference is now final and cannot be $overriddenOrSubclassed",
+            'multirelational' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' multi-relational',
             'new' => "Added new $apiTypeForMessage $apiReference",
             'passByRef' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' passed by reference',
             'readonly' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' read-only',
@@ -145,6 +156,8 @@ class Renderer
             'removed' => "Removed deprecated $apiTypeForMessage $apiReference",
             'returnByRef' => ucfirst($apiTypeForMessage) . " $apiReference " . ($apiData['isNow'] ? 'now' : 'no longer') . ' returns its value by reference',
             'returnType' => "Changed return type for $apiTypeForMessage $apiReference from $from to $to",
+            'through' => ucfirst($apiTypeForMessage) . " $apiReference " . ($apiData['isNow'] ? 'now' : 'no longer') . ' uses a "through" model',
+            'through-data' => "The \"through\" data for $apiTypeForMessage $apiReference has changed",
             'type' => "Changed type of $apiTypeForMessage $apiReference from $from to $to",
             'variadic' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' variadic',
             'visibility' => "Changed visibility for $apiTypeForMessage $apiReference from $from to $to",
@@ -260,6 +273,10 @@ class Renderer
                 $parent = $this->getApiReference('method', ['name' => $apiData['method'], 'class' => $apiData['class']]);
             }
             return "`\$$apiName` in $parent";
+        }
+        if (in_array($apiType, BreakingChangesComparer::DB_AND_RELATION)) {
+            $class = $this->getApiReference('class', ['name' => $apiData['class']]);
+            return "`{$apiName}` in $class";
         }
         throw new InvalidArgumentException("Unexpected API type $apiType");
     }

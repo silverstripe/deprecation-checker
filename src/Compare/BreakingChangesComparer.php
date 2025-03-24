@@ -17,7 +17,6 @@ use LogicException;
 use PhpParser\JsonDecoder;
 use PhpParser\Node;
 use PhpParser\Node\Expr\Array_;
-use PhpParser\Node\Expr\ArrayItem;
 use PhpParser\Node\Expr\BinaryOp\Concat;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\ConstFetch;
@@ -58,6 +57,19 @@ class BreakingChangesComparer
      * API which was deprecated in the old version but the deprecation message is malformed in some way
      */
     public const string ACTION_FIX_DEPRECATION = 'fix-deprecation';
+
+    /**
+     * Configuration properties that represent database field or relational config.
+     */
+    public const array DB_AND_RELATION = [
+        'db',
+        'fixed_fields',
+        'has_one',
+        'belongs_to',
+        'has_many',
+        'many_many',
+        'belongs_many_many',
+    ];
 
     private OutputInterface $output;
 
@@ -237,8 +249,8 @@ class BreakingChangesComparer
             'apiType' => $apiTypeTo,
         ];
 
-        $this->addApiFromExtensions($fqcn, $classFrom, $dataFrom, $module);
-        $this->addApiFromExtensions($fqcn, $classTo, $dataTo, $module);
+        $this->addApiFromExtensions($classFrom, $dataFrom, $module);
+        $this->addApiFromExtensions($classTo, $dataTo, $module);
 
         $isMissing = $this->checkForMissingApi($fqcn, $classFrom, $classTo, $dataFrom, $dataTo, $module);
         if ($isMissing) {
@@ -258,26 +270,58 @@ class BreakingChangesComparer
         $this->checkConstants($fqcn, $classFrom->getConstants(true), $classTo->getConstants(true), $module);
         $this->checkProperties($fqcn, $classFrom->getProperties(true), $classTo->getProperties(true), $module);
         $this->checkMethods($fqcn, $classFrom->getMethods(true), $classTo->getMethods(true), $classTo, $module);
+
+        if ($this->instanceOf($classFrom, 'SilverStripe\ORM\DataObject')) {
+            $this->checkDbFieldsAndRelations($fqcn, $classFrom, $classTo, $module);
+        }
     }
 
     /**
      * Add public methods and configuration from extensions.
      * API in extensions that are applied to an extension directly in the class are considered part of that class's API.
      */
-    private function addApiFromExtensions(string $name, ?ClassReflection $class, array $data, string $module): void
+    private function addApiFromExtensions(?ClassReflection $class, array $data, string $module): void
     {
+        $classProperties = $class?->getProperties();
+        foreach ($this->getExtensions($class, $data, $module) as $extension) {
+            // Add public methods and config properties if the class doesn't have them already.
+            /** @var MethodReflection $method */
+            foreach ($extension->getMethods(true) as $method) {
+                if ($method->isPublic() && !$class->getMethod($method->getName())) {
+                    $extensionMethod = ExtensionMethodReflection::fromArray($class->getProject(), $method->toArray());
+                    $extensionMethod->setExtensionClass($extension);
+                    $class->addMethod($extensionMethod);
+                }
+            }
+            /** @var PropertyReflection $method */
+            foreach ($extension->getProperties(true) as $property) {
+                if ($this->propertyIsConfig($property) && !array_key_exists($property->getName(), $classProperties)) {
+                    $extensionConfig = ExtensionConfigReflection::fromArray($class->getProject(), $property->toArray());
+                    $extensionConfig->setExtensionClass($extension);
+                    $class->addProperty($extensionConfig);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get class reflection for all extensions that are explicitly applied to a class.
+     * @return array<string, ClassReflection>
+     */
+    private function getExtensions(?ClassReflection $class, array $data, string $module): array
+    {
+        $extensions = [];
         /** @var PropertyReflection $extensionsProperty */
         $extensionsProperty = $class?->getProperties()['extensions'] ?? null;
         if (!$extensionsProperty) {
-            return;
+            return [];
         }
         $type = $this->getTypeFromReflection($class);
         $ref = $this->getRefFromReflection($class);
         $extensionsRawValue = $extensionsProperty->getDefault();
         if (empty($extensionsRawValue['items'])) {
-            return;
+            return [];
         }
-        $classProperties = $class->getProperties();
         foreach ($extensionsRawValue['items'] ?? [] as $extensionRaw) {
             $value = $extensionRaw['value'];
             // This is the type for PhpParser\Node\Expr\ClassConstFetch i.e. SomeClass::class
@@ -298,24 +342,9 @@ class BreakingChangesComparer
                 ];
                 continue;
             }
-            // Add public methods and config properties if the class doesn't have them already.
-            /** @var MethodReflection $method */
-            foreach ($extension->getMethods(true) as $method) {
-                if ($method->isPublic() && !$class->getMethod($method->getName())) {
-                    $extensionMethod = ExtensionMethodReflection::fromArray($class->getProject(), $method->toArray());
-                    $extensionMethod->setExtensionClass($extension);
-                    $class->addMethod($extensionMethod);
-                }
-            }
-            /** @var PropertyReflection $method */
-            foreach ($extension->getProperties(true) as $property) {
-                if ($property->isPrivate() && $property->isStatic() && !array_key_exists($property->getName(), $classProperties)) {
-                    $extensionConfig = ExtensionConfigReflection::fromArray($class->getProject(), $property->toArray());
-                    $extensionConfig->setExtensionClass($extension);
-                    $class->addProperty($extensionConfig);
-                }
-            }
+            $extensions[$extensionFQCN] = $extension;
         }
+        return $extensions;
     }
 
     /**
@@ -432,7 +461,7 @@ class BreakingChangesComparer
             'file' => $fileFrom,
             'line' => $propertyFrom->getLine(),
             'class' => $classFrom?->getName(),
-            'apiType' => ($propertyFrom->isPrivate() && $propertyFrom->isStatic()) ? 'config' : 'property',
+            'apiType' => $this->propertyIsConfig($propertyFrom) ? 'config' : 'property',
         ];
         /** @var ClassReflection|null $classTo */
         $classTo = $propertyTo?->getClass();
@@ -445,7 +474,7 @@ class BreakingChangesComparer
             // It's possible for example that the code was refactored into a trait in the new version which would
             // result in $classTo being the trait, NOT the class we're actually looking at.
             'class' => $classFrom?->getName(),
-            'apiType' => ($propertyTo?->isPrivate() && $propertyTo?->isStatic()) ? 'config' : 'property',
+            'apiType' => $this->propertyIsConfig($propertyTo) ? 'config' : 'property',
         ];
 
         $isMissing = $this->checkForMissingApi($name, $propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
@@ -463,16 +492,20 @@ class BreakingChangesComparer
             ];
         }
 
-        // Change to the default value of configuration property specifically
-        if ($propertyFrom->isPrivate() && $propertyFrom->isStatic()) {
-            // The values were encoded, then decoded as arrays. We need to re-encode then decode as node instances.
-            $decoder = new JsonDecoder();
-            $propertyNodeFrom = $decoder->decode(json_encode($propertyFrom->getDefault()));
-            $propertyNodeTo = $decoder->decode(json_encode($propertyTo->getDefault()));
+        // Skip checking value changes for DataObject database fields and relations.
+        // Those are specifically checked in more detail in a separate step.
+        if ($this->instanceOf($classFrom, 'SilverStripe\ORM\DataObject')
+            && in_array($name, BreakingChangesComparer::DB_AND_RELATION)
+        ) {
+            return;
+        }
+
+        // Check for changes to the default value of configuration property
+        if ($this->propertyIsConfig($propertyFrom)) {
             // Compare the values as strings or arrays as that's much easier
-            $propertyValueFrom = $this->getNodeValue($propertyNodeFrom, $classFrom);
-            $propertyValueTo = $this->getNodeValue($propertyNodeTo, $classTo);
-            if ($this->defaultParamValuesDiffer($propertyValueFrom, $propertyValueTo)) {
+            $propertyValueFrom = $this->getDefaultValue($propertyFrom->getDefault(), $classFrom);
+            $propertyValueTo = $this->getDefaultValue($propertyTo->getDefault(), $classTo);
+            if ($this->defaultValuesDiffer($propertyValueFrom, $propertyValueTo)) {
                 if (is_array($propertyValueFrom) && is_array($propertyValueTo)) {
                     $this->breakingChanges[$module]['default-array'][$type][$ref] = $dataTo;
                 } else {
@@ -586,6 +619,232 @@ class BreakingChangesComparer
         }
 
         $this->checkParameters($methodFrom->getParameters(), $methodTo->getParameters(), $module);
+    }
+
+    /**
+     * Check for API breaking changes in db field and relational configuration defined on the class or explicit extensions
+     */
+    private function checkDbFieldsAndRelations(string $fqcn, ClassReflection $classFrom, ClassReflection $classTo, string $module): void
+    {
+        // @TODO check these all work
+        $baseRef = $this->getRefFromReflection($classFrom);
+
+        // Check $db
+        $dbFrom = $this->getArrayConfigValue($classFrom, 'db', $module);
+        $dbTo = $this->getArrayConfigValue($classTo, 'db', $module);
+        $this->checkDbAndSimpleRelation($fqcn, $dbFrom, $dbTo, 'db', 'database field', $baseRef, $module);
+
+        // Check $fixed_fields
+        $fixedFrom = $this->getArrayConfigValue($classFrom, 'fixed_fields', $module);
+        $fixedTo = $this->getArrayConfigValue($classTo, 'fixed_fields', $module);
+        $this->checkDbAndSimpleRelation($fqcn, $fixedFrom, $fixedTo, 'fixed_field', 'fixed database field', $baseRef, $module);
+
+        // Check $has_one
+        $hasOneFrom = $this->getArrayConfigValue($classFrom, 'has_one', $module);
+        $hasOneTo = $this->getArrayConfigValue($classTo, 'has_one', $module);
+        $this->checkHasOne($fqcn, $hasOneFrom, $hasOneTo, $baseRef, $module);
+
+        // Check $belongs_to
+        $belongsToFrom = $this->getArrayConfigValue($classFrom, 'belongs_to', $module);
+        $belongsToTo = $this->getArrayConfigValue($classTo, 'belongs_to', $module);
+        $this->checkDbAndSimpleRelation($fqcn, $belongsToFrom, $belongsToTo, 'belongs_to', '`belongs_to` relation', $baseRef, $module);
+
+        // Check $has_many
+        $hasManyFrom = $this->getArrayConfigValue($classFrom, 'has_many', $module);
+        $hasManyTo = $this->getArrayConfigValue($classTo, 'has_many', $module);
+        $this->checkDbAndSimpleRelation($fqcn, $hasManyFrom, $hasManyTo, 'has_many', '`has_many` relation', $baseRef, $module);
+
+        // Check $belongs_many_many
+        $belongsManyFrom = $this->getArrayConfigValue($classFrom, 'belongs_many_many', $module);
+        $belongsManyTo = $this->getArrayConfigValue($classTo, 'belongs_many_many', $module);
+        $this->checkDbAndSimpleRelation($fqcn, $belongsManyFrom, $belongsManyTo, 'belongs_many_many', '`belongs_many_many` relation', $baseRef, $module);
+
+        // Check $many_many
+        $manyManyFrom = $this->getArrayConfigValue($classFrom, 'many_many', $module);
+        $manyManyTo = $this->getArrayConfigValue($classTo, 'many_many', $module);
+        $this->checkManyMany($fqcn, $manyManyFrom, $manyManyTo, $baseRef, $module);
+    }
+
+    /**
+     * Check for API breaking changes in database fields and simple relation types.
+     * Checks include:
+     * - API existed but was removed
+     * - API changed database field type or relation class
+     */
+    private function checkDbAndSimpleRelation(
+        string $fqcn,
+        array $configFrom,
+        array $configTo,
+        string $dataType,
+        string $apiType,
+        string $baseRef,
+        string $module
+    ): void {
+        // Sorting makes this easier to debug
+        ksort($configFrom);
+        ksort($configTo);
+        foreach ($configFrom as $key => $value) {
+            $ref = "{$baseRef}.{$dataType}-{$key}";
+            $data = [
+                'name' => trim($key, "'"),
+                'apiType' => $apiType,
+                'class' => $fqcn,
+            ];
+
+            // Check if relation/field has been removed
+            if (!array_key_exists($key, $configTo)) {
+                $this->breakingChanges[$module]['removed'][$dataType][$ref] = $data;
+                continue;
+            }
+
+            // Check if relation/field class has changed
+            if ($value !== $configTo[$key]) {
+                $this->breakingChanges[$module]['type'][$dataType][$ref] = [
+                    ...$data,
+                    BreakingChangesComparer::FROM => $value,
+                    BreakingChangesComparer::TO => $configTo[$key],
+                ];
+            }
+        }
+    }
+
+    /**
+     * Check for API breaking changes in has_one relations.
+     * Checks include:
+     * - API existed but was removed
+     * - API changed relation class
+     * - API changed whether it's multi-relational or not
+     */
+    private function checkHasOne(string $fqcn, array $hasOneFrom, array $hasOneTo, string $baseRef, string $module): void
+    {
+        // Sorting makes this easier to debug
+        ksort($hasOneFrom);
+        ksort($hasOneTo);
+        $type = 'has_one';
+        foreach ($hasOneFrom as $key => $value) {
+            $ref = "{$baseRef}.{$type}-{$key}";
+            $data = [
+                'name' => trim($key, "'"),
+                'apiType' => '`has_one` relation',
+                'class' => $fqcn,
+            ];
+
+            // Check if relation has been removed
+            if (!array_key_exists($key, $hasOneTo)) {
+                $this->breakingChanges[$module]['removed'][$type][$ref] = $data;
+                continue;
+            }
+
+            // Check if relation class has changed
+            $fromClass = $value['class'] ?? $value;
+            $toClass = $hasOneTo[$key]['class'] ?? $hasOneTo[$key];
+            if ($fromClass !== $toClass) {
+                $this->breakingChanges[$module]['type'][$type][$ref] = [
+                    ...$data,
+                    BreakingChangesComparer::FROM => $fromClass,
+                    BreakingChangesComparer::TO => $toClass,
+                ];
+            }
+
+            // Check if multirelational has changed
+            $fromMultiRelational = $value['multirelational'] ?? false;
+            $toMultiRelational = $hasOneTo[$key]['multirelational'] ?? false;
+            if ($fromMultiRelational !== $toMultiRelational) {
+                $this->breakingChanges[$module]['multirelational'][$type][$ref] = [
+                    ...$data,
+                    // $toMultiRelational is probably a string due to the way getDefaultValue() works
+                    'isNow' => filter_var($toMultiRelational, FILTER_VALIDATE_BOOL),
+                ];
+            }
+        }
+    }
+
+    /**
+     * Check for API breaking changes in many_many relations.
+     * Checks include:
+     * - API existed but was removed
+     * - API changed relation class
+     * - API changed whether it's a "through" relation or not
+     * - API changed some of its "through" data
+     */
+    private function checkManyMany(string $fqcn, array $manyManyFrom, array $manyManyTo, string $baseRef, string $module): void
+    {
+        // Sorting makes this easier to debug
+        ksort($manyManyFrom);
+        ksort($manyManyTo);
+        $type = 'many_many';
+        foreach ($manyManyFrom as $key => $valueFrom) {
+            $ref = "{$baseRef}.{$type}-{$key}";
+            $data = [
+                'name' => trim($key, "'"),
+                'apiType' => '`many_many` relation',
+                'class' => $fqcn,
+            ];
+
+            // Check if relation has been removed
+            if (!array_key_exists($key, $manyManyTo)) {
+                $this->breakingChanges[$module]['removed'][$type][$ref] = $data;
+                continue;
+            }
+
+            $valueTo = $manyManyTo[$key];
+
+            // Check if they're both regular many_many
+            $fromIsThrough = is_array($valueFrom);
+            $toIsThrough = is_array($valueTo);
+            if (!$fromIsThrough && !$toIsThrough) {
+                // Check if relation class has changed
+                if ($valueFrom !== $valueTo) {
+                    $this->breakingChanges[$module]['type'][$type][$ref] = [
+                        ...$data,
+                        BreakingChangesComparer::FROM => $valueFrom,
+                        BreakingChangesComparer::TO => $valueTo,
+                    ];
+                }
+                // We don't need to check through config because there is none
+                continue;
+            }
+
+            // Check if it's changing whether it's a many_many through relation
+            if ($fromIsThrough !== $toIsThrough) {
+                $this->breakingChanges[$module]['through'][$type][$ref] = [
+                    ...$data,
+                    'isNow' => $toIsThrough,
+                ];
+                continue;
+            }
+
+            // Check if the through config has changed
+            if ($valueFrom !== $valueTo) {
+                $this->breakingChanges[$module]['through-data'][$type][$ref] = $data;
+            }
+        }
+    }
+
+    /**
+     * Get the value of an array config property, such as `$db` or `$has_one`
+     */
+    private function getArrayConfigValue(ClassReflection $class, string $property, string $module)
+    {
+        $properties = [];
+        // @TODO $data
+        $extensions = $this->getExtensions($class, [], $module);
+        foreach ($extensions as $extension) {
+            $properties[] = $extension->getProperties(true)[$property] ?? null;
+        }
+        // Add property from class last, as it will override any extensions
+        // @TODO confirm that
+        $properties[] = $class->getProperties(true)[$property] ?? null;
+
+        $value = [];
+        /** @var PropertyReflection $property */
+        foreach (array_filter($properties) as $property) {
+            if (!$this->propertyIsConfig($property)) {
+                continue;
+            }
+            $value = array_merge($value, $this->getDefaultValue($property->getDefault(), $class));
+        }
+        return $value;
     }
 
     /**
@@ -720,7 +979,7 @@ class BreakingChangesComparer
         }
 
         // Change to the default value
-        if ($this->defaultParamValuesDiffer($parameterFrom->getDefault(), $parameterTo->getDefault())) {
+        if ($this->defaultValuesDiffer($parameterFrom->getDefault(), $parameterTo->getDefault())) {
             $this->breakingChanges[$module]['default'][$type][$ref] = [
                 ...$dataTo,
                 BreakingChangesComparer::FROM => $parameterFrom->getDefault(),
@@ -766,7 +1025,7 @@ class BreakingChangesComparer
      * Check if the default value for two params are materially different.
      * Ignores changes that don't affect anything, such as whether single or double quotes are used.
      */
-    private function defaultParamValuesDiffer(mixed $valueFrom, mixed $valueTo): bool
+    private function defaultValuesDiffer(mixed $valueFrom, mixed $valueTo): bool
     {
         if ($valueFrom !== $valueTo) {
             // I think it IS always a string, but the API doesn't guarantee that.
@@ -1019,7 +1278,7 @@ class BreakingChangesComparer
             ParameterReflection::class => 'param',
             MethodReflection::class => 'method',
             ExtensionMethodReflection::class => 'method',
-            PropertyReflection::class => ($reflection->isPrivate() && $reflection->isStatic()) ? 'config' : 'property',
+            PropertyReflection::class => $this->propertyIsConfig($reflection) ? 'config' : 'property',
             ExtensionConfigReflection::class => 'config',
             ConstantReflection::class => 'const',
             FunctionReflection::class => 'function',
@@ -1110,8 +1369,12 @@ class BreakingChangesComparer
     /**
      * Get the value a node represents as either a string or an array.
      */
-    private function getNodeValue(?Node $node, ClassReflection $class): string|array
+    private function getDefaultValue(mixed $default, ClassReflection $class, bool $simplifyArray = true): string|array
     {
+        // The values were encoded, then decoded as arrays. We need to re-encode then decode as node instances.
+        $decoder = new JsonDecoder();
+        /** @var Node|null $node */
+        $node = $decoder->decode(json_encode($default));
         if (!$node) {
             return 'null';
         }
@@ -1121,18 +1384,11 @@ class BreakingChangesComparer
         if ($node instanceof Array_) {
             $items = [];
             foreach ($node->items as $item) {
-                $items[] = $this->getNodeValue($item, $class);
+                $key = $this->getDefaultValue($item->key, $class);
+                $value = $this->getDefaultValue($item->value, $class);
+                $items[$key] = $value;
             }
             return $items;
-        }
-        if ($node instanceof ArrayItem) {
-            $key = $this->getNodeValue($node->key, $class);
-            $value = $this->getNodeValue($node->value, $class);
-            if (is_array($key) || is_array($value)) {
-                // the value will be dealt with in checkProperty which calls this.
-                return ['sub-array'];
-            }
-            return "[{$key} => {$value}]";
         }
         // ConstFetch seems to include null and bool values
         if ($node instanceof ConstFetch) {
@@ -1150,11 +1406,11 @@ class BreakingChangesComparer
             return (string) $node->value;
         }
         if ($node instanceof Concat) {
-            return "'" . trim($this->getNodeValue($node->left, $class), "'") . trim($this->getNodeValue($node->right, $class), "'") . "'";
+            return "'" . trim($this->getDefaultValue($node->left, $class), "'") . trim($this->getDefaultValue($node->right, $class), "'") . "'";
         }
         if ($node instanceof UnaryMinus) {
             if ($node->expr instanceof DNumber || $node->expr instanceof LNumber) {
-                return '-' . $this->getNodeValue($node->expr, $class);
+                return '-' . $this->getDefaultValue($node->expr, $class);
             }
         }
         if ($node instanceof Class_) {
@@ -1178,5 +1434,27 @@ class BreakingChangesComparer
         }
 
         return true;
+    }
+
+    /**
+     * Check if a property is configuration
+     */
+    private function propertyIsConfig(?PropertyReflection $property): bool
+    {
+        if (!$property) {
+            return false;
+        }
+        return $property->isPrivate() && $property->isStatic();
+    }
+
+    private function instanceOf(ClassReflection $class, string $instanceOf): bool
+    {
+        $hierarchy = [$class, ...$class->getParent(true)];
+        foreach ($hierarchy as $candidate) {
+            if ($candidate->getName() === $instanceOf) {
+                return true;
+            }
+        }
+        return false;
     }
 }
