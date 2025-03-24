@@ -679,12 +679,22 @@ class BreakingChangesComparer
             return;
         }
 
-        // @TODO check manually instead. Only need to check type - but we have to do that custom because
-        //       `string $something = null` is the same as `?string $something = null`
-        $this->checkForSignatureChanges($parameterFrom, $parameterTo, $dataTo, $module);
+        // Check for type changes
+        $ref = $this->getRefFromReflection($parameterTo);
+        if ($this->paramHintChanged($parameterFrom, $parameterTo)) {
+            $isIntersectionTypeFrom = method_exists($parameterFrom, 'isIntersectionType') ? $parameterFrom->isIntersectionType() : false;
+            $isIntersectionTypeTo = method_exists($parameterTo, 'isIntersectionType') ? $parameterTo->isIntersectionType() : false;
+            $this->breakingChanges[$module]['type'][$type][$ref] = [
+                ...$dataTo,
+                BreakingChangesComparer::FROM => $this->getHintStringWithFQCN($parameterFrom->getHint(), $isIntersectionTypeFrom),
+                BreakingChangesComparer::TO => $this->getHintStringWithFQCN($parameterTo->getHint(), $isIntersectionTypeTo),
+                // Because of https://github.com/code-lts/doctum/issues/76 we can't always rely on the FQCN resolution above.
+                BreakingChangesComparer::FROM . 'Orig' => $parameterFrom->getHintAsString(),
+                BreakingChangesComparer::TO . 'Orig' => $parameterTo->getHintAsString(),
+            ];
+        }
 
         // Check if param was renamed
-        $ref = $this->getRefFromReflection($parameterTo);
         if ($parameterTo->getName() !== $name) {
             $this->breakingChanges[$module]['renamed'][$type][$ref] = [
                 ...$dataTo,
@@ -717,6 +727,39 @@ class BreakingChangesComparer
                 BreakingChangesComparer::TO => $parameterTo->getDefault(),
             ];
         }
+    }
+
+    /**
+     * Check if the type hint of a paramater has changed or not.
+     */
+    private function paramHintChanged(ParameterReflection $parameterFrom, ?ParameterReflection $parameterTo)
+    {
+        // No change
+        if ($parameterFrom->getHintAsString() === $parameterTo->getHintAsString()) {
+            return false;
+        }
+
+        // `string $something = null` is the same as `?string $something = null`
+        if (($parameterFrom->getDefault() === 'null' && $this->hintIsNullable($parameterFrom->getHint()))
+            || ($parameterTo->getDefault() === 'null' && $this->hintIsNullable($parameterTo->getHint()))
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if a type hint is nullable or not.
+     */
+    private function hintIsNullable(array $hintArray): bool
+    {
+        foreach ($hintArray as $hint) {
+            if ((string) $hint->getName() === 'null') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -838,7 +881,8 @@ class BreakingChangesComparer
         if (in_array($type, ['function', 'method'])) {
             $hintType = 'returnType';
         }
-        if (in_array($type, ['property', 'const', 'param'])) {
+        // param not included because that gets tested in a special way in checkParam()
+        if (in_array($type, ['property', 'const'])) {
             $hintType = 'type';
         }
 
