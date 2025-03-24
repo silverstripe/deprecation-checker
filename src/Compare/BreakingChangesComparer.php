@@ -14,6 +14,18 @@ use Doctum\Reflection\Reflection;
 use Doctum\Version\Version;
 use InvalidArgumentException;
 use LogicException;
+use PhpParser\JsonDecoder;
+use PhpParser\Node;
+use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\ArrayItem;
+use PhpParser\Node\Expr\BinaryOp\Concat;
+use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Expr\ConstFetch;
+use PhpParser\Node\Expr\UnaryMinus;
+use PhpParser\Node\Scalar\DNumber;
+use PhpParser\Node\Scalar\LNumber;
+use PhpParser\Node\Scalar\MagicConst\Class_;
+use PhpParser\Node\Scalar\String_;
 use Silverstripe\DeprecationChangelogGenerator\Command\CloneCommand;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -450,6 +462,34 @@ class BreakingChangesComparer
                 'isNow' => $propertyTo->isReadOnly(),
             ];
         }
+
+        // Change to the default value of configuration property specifically
+        if ($propertyFrom->isPrivate() && $propertyFrom->isStatic()) {
+            // The values were encoded, then decoded as arrays. We need to re-encode then decode as node instances.
+            $decoder = new JsonDecoder();
+            $propertyNodeFrom = $decoder->decode(json_encode($propertyFrom->getDefault()));
+            $propertyNodeTo = $decoder->decode(json_encode($propertyTo->getDefault()));
+            // Compare the values as strings or arrays as that's much easier
+            $propertyValueFrom = $this->getNodeValue($propertyNodeFrom, $classFrom);
+            $propertyValueTo = $this->getNodeValue($propertyNodeTo, $classTo);
+            if ($this->defaultParamValuesDiffer($propertyValueFrom, $propertyValueTo)) {
+                if (is_array($propertyValueFrom) && is_array($propertyValueTo)) {
+                    $this->breakingChanges[$module]['default-array'][$type][$ref] = $dataTo;
+                } else {
+                    if ($propertyValueFrom === []) {
+                        $propertyValueFrom = '[]';
+                    }
+                    if ($propertyValueTo === []) {
+                        $propertyValueTo = '[]';
+                    }
+                    $this->breakingChanges[$module]['default'][$type][$ref] = [
+                        ...$dataTo,
+                        BreakingChangesComparer::FROM => $propertyValueFrom,
+                        BreakingChangesComparer::TO => $propertyValueTo,
+                    ];
+                }
+            }
+        }
     }
 
     /**
@@ -681,7 +721,7 @@ class BreakingChangesComparer
             // I think it IS always a string, but the API doesn't guarantee that.
             // For safety, anything that isn't a string just gets a straight equality check.
             if (!is_string($valueFrom) || !is_string($valueTo)) {
-                return true;
+                return $valueFrom !== $valueTo;
             }
             // See if the quote types are all that changed.
             // The values are RAW - i.e. string values include their surrounding quotes.
@@ -1013,6 +1053,63 @@ class BreakingChangesComparer
         $separator = $isIntersectionType ? '&' : '|';
         $x = implode($separator, $hintParts);
         return $x;
+    }
+
+    /**
+     * Get the value a node represents as either a string or an array.
+     */
+    private function getNodeValue(?Node $node, ClassReflection $class): string|array
+    {
+        if (!$node) {
+            return 'null';
+        }
+        if ($node instanceof String_) {
+            return "'{$node->value}'";
+        }
+        if ($node instanceof Array_) {
+            $items = [];
+            foreach ($node->items as $item) {
+                $items[] = $this->getNodeValue($item, $class);
+            }
+            return $items;
+        }
+        if ($node instanceof ArrayItem) {
+            $key = $this->getNodeValue($node->key, $class);
+            $value = $this->getNodeValue($node->value, $class);
+            if (is_array($key) || is_array($value)) {
+                // @TODO handle this
+                return ['sub-array'];
+            }
+            return "[{$key} => {$value}]";
+        }
+        // ConstFetch seems to include null and bool values
+        if ($node instanceof ConstFetch) {
+            return $node->name->name ?? $node->name->toString();
+        }
+        if ($node instanceof ClassConstFetch) {
+            $class = $node->class->name ?? $node->class->toString();
+            $const = $node->name->name ?? $node->name->toString();
+            if ($const === 'class') {
+                return $class;
+            }
+            return "{$class}::{$const}";
+        }
+        if ($node instanceof LNumber || $node instanceof DNumber) {
+            return (string) $node->value;
+        }
+        if ($node instanceof Concat) {
+            return "'" . trim($this->getNodeValue($node->left, $class), "'") . trim($this->getNodeValue($node->right, $class), "'") . "'";
+        }
+        if ($node instanceof UnaryMinus) {
+            if ($node->expr instanceof DNumber || $node->expr instanceof LNumber) {
+                return '-' . $this->getNodeValue($node->expr, $class);
+            }
+        }
+        if ($node instanceof Class_) {
+            return $class->getName();
+        }
+        $nodeClass = get_class($node);
+        throw new LogicException("Unexpected node type {$nodeClass} - need to add logic to handle this.");
     }
 
     /**

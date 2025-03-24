@@ -80,6 +80,7 @@ class Renderer
                 'passByRef' => $apiTypeOrder,
                 'readonly' => $apiTypeOrder,
                 'variadic' => $apiTypeOrder,
+                'default-array' => $apiTypeOrder,
                 'default' => $apiTypeOrder,
             ];
             foreach ($moduleChanges as $changeType => $typeChanges) {
@@ -135,6 +136,7 @@ class Renderer
             'abstract' => ucfirst($apiTypeForMessage) . " $apiReference is now abstract",
             'internal' => ucfirst($apiTypeForMessage) . " $apiReference is now internal and should not be used",
             'default' => "Changed default value for $apiTypeForMessage $apiReference from $from to $to",
+            'default-array' => "Changed default value for $apiTypeForMessage $apiReference - array values have changed",
             'final' => ucfirst($apiTypeForMessage) . " $apiReference is now final and cannot be $overriddenOrSubclassed",
             'new' => "Added new $apiTypeForMessage $apiReference",
             'passByRef' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' passed by reference',
