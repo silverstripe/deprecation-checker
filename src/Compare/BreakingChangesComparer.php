@@ -476,11 +476,19 @@ class BreakingChangesComparer
                 if (is_array($propertyValueFrom) && is_array($propertyValueTo)) {
                     $this->breakingChanges[$module]['default-array'][$type][$ref] = $dataTo;
                 } else {
-                    if ($propertyValueFrom === []) {
-                        $propertyValueFrom = '[]';
+                    if (is_array($propertyValueFrom)) {
+                        if (empty($propertyValueFrom)) {
+                            $propertyValueFrom = '[]';
+                        } else {
+                            $propertyValueFrom = 'array';
+                        }
                     }
-                    if ($propertyValueTo === []) {
-                        $propertyValueTo = '[]';
+                    if (is_array($propertyValueTo)) {
+                        if (empty($propertyValueTo)) {
+                            $propertyValueTo = '[]';
+                        } else {
+                            $propertyValueTo = 'array';
+                        }
                     }
                     $this->breakingChanges[$module]['default'][$type][$ref] = [
                         ...$dataTo,
@@ -1077,7 +1085,7 @@ class BreakingChangesComparer
             $key = $this->getNodeValue($node->key, $class);
             $value = $this->getNodeValue($node->value, $class);
             if (is_array($key) || is_array($value)) {
-                // @TODO handle this
+                // the value will be dealt with in checkProperty which calls this.
                 return ['sub-array'];
             }
             return "[{$key} => {$value}]";
