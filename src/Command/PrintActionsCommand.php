@@ -3,7 +3,6 @@
 namespace Silverstripe\DeprecationChangelogGenerator\Command;
 
 use InvalidArgumentException;
-use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;

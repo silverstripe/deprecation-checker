@@ -143,7 +143,7 @@ class GenerateCommand extends BaseCommand
         if (!empty($this->actionsToTake)) {
             $numActions = $this->getActionsCount();
             $actionsFile = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_ACTIONS);
-            $warnings[] = "$numActions actions to take. See '{$actionsFile}' for details.";
+            $warnings[] = "$numActions actions to take. See '{$actionsFile}' or run the `print-actions` command for details.";
         }
 
         if (count($this->breakingApiChanges) < 1) {
