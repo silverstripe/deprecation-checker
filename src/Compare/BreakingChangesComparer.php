@@ -164,7 +164,7 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($functionFrom, $functionTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($functionFrom, $functionTo, $dataTo, $module);
 
         // Changed whether it's passed by reference (preceeded with `&`) or not
         if ($functionFrom->isByRef() !== $functionTo->isByRef()) {
@@ -233,7 +233,7 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($classFrom, $classTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($classFrom, $classTo, $dataTo, $module);
 
         // Class-like has changed what type of class-like it is (e.g. from class to interface)
         if ($classFrom->getCategoryId() !== $classTo->getCategoryId()) {
@@ -371,7 +371,7 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($constFrom, $constTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($constFrom, $constTo, $dataTo, $module);
     }
 
     /**
@@ -411,6 +411,7 @@ class BreakingChangesComparer
     ): void {
         $this->output->writeln("Checking property $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         $type = $this->getTypeFromReflection($propertyFrom);
+        $ref = $this->getRefFromReflection($propertyFrom);
         /** @var ClassReflection|null $classFrom */
         $classFrom = $propertyFrom->getClass();
         $fileFrom = $classFrom?->getFile() ?? null;
@@ -440,10 +441,10 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($propertyFrom, $propertyTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($propertyFrom, $propertyTo, $dataTo, $module);
 
+        // Check if readonly changes
         if ($propertyFrom->isReadOnly() !== $propertyTo->isReadOnly()) {
-            $ref = $this->getRefFromReflection($propertyTo);
             $this->breakingChanges[$module]['readonly'][$type][$ref] = [
                 ...$dataTo,
                 'isNow' => $propertyTo->isReadOnly(),
@@ -524,7 +525,7 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($methodFrom, $methodTo, $dataFrom, $dataTo, $module);
+        $this->checkForSignatureChanges($methodFrom, $methodTo, $dataTo, $module);
 
         // Changed whether it's passed by reference (preceeded with `&`) or not
         if ($methodFrom->isByRef() !== $methodTo->isByRef()) {
@@ -630,7 +631,9 @@ class BreakingChangesComparer
             return;
         }
 
-        $this->checkForSignatureChanges($parameterFrom, $parameterTo, $dataFrom, $dataTo, $module);
+        // @TODO check manually instead. Only need to check type - but we have to do that custom because
+        //       `string $something = null` is the same as `?string $something = null`
+        $this->checkForSignatureChanges($parameterFrom, $parameterTo, $dataTo, $module);
 
         // Check if param was renamed
         $ref = $this->getRefFromReflection($parameterTo);
@@ -778,8 +781,7 @@ class BreakingChangesComparer
     private function checkForSignatureChanges(
         Reflection $reflectionFrom,
         ?Reflection $reflectionTo,
-        array $dataFrom,
-        array $dataTo,
+        array $data,
         string $module
     ): void {
         $type = $this->getTypeFromReflection($reflectionFrom);
@@ -797,7 +799,7 @@ class BreakingChangesComparer
             $isIntersectionTypeFrom = method_exists($reflectionFrom, 'isIntersectionType') ? $reflectionFrom->isIntersectionType() : false;
             $isIntersectionTypeTo = method_exists($reflectionTo, 'isIntersectionType') ? $reflectionTo->isIntersectionType() : false;
             $this->breakingChanges[$module][$hintType][$type][$ref] = [
-                ...$dataTo,
+                ...$data,
                 BreakingChangesComparer::FROM => $this->getHintStringWithFQCN($reflectionFrom->getHint(), $isIntersectionTypeFrom),
                 BreakingChangesComparer::TO => $this->getHintStringWithFQCN($reflectionTo->getHint(), $isIntersectionTypeTo),
                 // Because of https://github.com/code-lts/doctum/issues/76 we can't always rely on the FQCN resolution above.
@@ -806,26 +808,48 @@ class BreakingChangesComparer
             ];
         }
 
-        // Check for visibility changes
-        $visibilityFrom = $this->getVisibilityFromReflection($reflectionFrom);
-        $visibilityTo = $this->getVisibilityFromReflection($reflectionTo);
-        if ($visibilityFrom !== $visibilityTo) {
-            $this->breakingChanges[$module]['visibility'][$type][$ref] = [
-                ...$dataTo,
-                BreakingChangesComparer::FROM => $visibilityFrom,
-                BreakingChangesComparer::TO => $visibilityTo,
-            ];
-        }
+        $this->checkForVisibilityChanges($reflectionFrom, $reflectionTo, $data, $module);
 
         // Check for becoming final
         if (!$reflectionFrom->isFinal() && $reflectionTo->isFinal()) {
-            $this->breakingChanges[$module]['final'][$type][$ref] = $dataTo;
+            $this->breakingChanges[$module]['final'][$type][$ref] = $data;
         }
 
         // Check for becoming abstract
         if (!$reflectionFrom->isAbstract() && $reflectionTo->isAbstract()) {
-            $this->breakingChanges[$module]['abstract'][$type][$ref] = $dataTo;
+            $this->breakingChanges[$module]['abstract'][$type][$ref] = $data;
         }
+    }
+
+    /**
+     * Checks to see if the visibility of the API has changed.
+     * Note that changing between undefined and `public` doesn't count as a breaking change.
+     */
+    private function checkForVisibilityChanges(
+        Reflection $reflectionFrom,
+        ?Reflection $reflectionTo,
+        array $data,
+        string $module
+    ): void {
+        $visibilityFrom = $this->getVisibilityFromReflection($reflectionFrom);
+        $visibilityTo = $this->getVisibilityFromReflection($reflectionTo);
+
+        if ($visibilityFrom === $visibilityTo) {
+            return;
+        }
+
+        // Nothing to public or vice versa isn't a breaking change in PHP 8.
+        if ((!$visibilityFrom && $visibilityTo === 'public') || ($visibilityFrom === 'public' && !$visibilityFrom)) {
+            return;
+        }
+
+        $type = $this->getTypeFromReflection($reflectionFrom);
+        $ref = $this->getRefFromReflection($reflectionFrom);
+        $this->breakingChanges[$module]['visibility'][$type][$ref] = [
+            ...$data,
+            BreakingChangesComparer::FROM => $visibilityFrom,
+            BreakingChangesComparer::TO => $visibilityTo,
+        ];
     }
 
     /**
