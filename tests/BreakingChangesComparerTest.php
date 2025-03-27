@@ -16,14 +16,6 @@ class BreakingChangesComparerTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        // Remove any cache from previously running the test.
-        // This ensures we test the _new_ fixture code, not any previously parsed stuff.
-        $cacheDir = Path::join(__DIR__, 'fixture-code/cache');
-        if (is_dir($cacheDir)) {
-            $filesystem = new Filesystem();
-            $filesystem->remove($cacheDir);
-        }
-
         // Note that from-only wouldn't be included in the supported modules list
         // because we only care about modules in the "to" list. See GenerateCommand::findSupportedModules().
         // But we do have some code in some-org/from-only to check that this list is respected.
@@ -58,6 +50,16 @@ class BreakingChangesComparerTest extends TestCase
         $factory = new ParserFactory($supportedModules, Path::join(__DIR__, 'fixture-code'));
         BreakingChangesComparerTest::$project = $factory->buildProject();
         BreakingChangesComparerTest::$project->parse();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        // Remove any cache from running the test.
+        $cacheDir = Path::join(__DIR__, 'fixture-code/cache');
+        if (is_dir($cacheDir)) {
+            $filesystem = new Filesystem();
+            $filesystem->remove($cacheDir);
+        }
     }
 
     public function testCompare()
