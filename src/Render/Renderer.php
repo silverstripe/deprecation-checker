@@ -1,12 +1,12 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Render;
+namespace SilverStripe\DeprecationChangelogGenerator\Render;
 
 use Doctum\Project;
 use Doctum\Version\Version;
 use InvalidArgumentException;
 use LogicException;
-use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
+use SilverStripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
 use Symfony\Component\Filesystem\Path;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
@@ -81,11 +81,12 @@ class Renderer
                 'type' => $apiTypeOrder,
                 'renamed' => [], // params only
                 'new' => [], // params only
+                'static' => [], //methods only
                 'abstract' => $apiTypeOrder,
                 'final' => $apiTypeOrder,
                 'returnByRef' => $apiTypeOrder,
                 'passByRef' => [], // params only
-                'readonly' => [], // properties only
+                'readonly' => $apiTypeOrder,
                 'variadic' => [], // params only
                 'default-array' => [], // properties only
                 'default' => $apiTypeOrder,
@@ -156,6 +157,7 @@ class Renderer
             'removed' => "Removed deprecated $apiTypeForMessage $apiReference",
             'returnByRef' => ucfirst($apiTypeForMessage) . " $apiReference " . ($apiData['isNow'] ? 'now' : 'no longer') . ' returns its value by reference',
             'returnType' => "Changed return type for $apiTypeForMessage $apiReference from $from to $to",
+            'static' => ucfirst($apiTypeForMessage) . " $apiReference is " . ($apiData['isNow'] ? 'now' : 'no longer') . ' static',
             'through' => ucfirst($apiTypeForMessage) . " $apiReference " . ($apiData['isNow'] ? 'now' : 'no longer') . ' uses a "through" model',
             'through-data' => "The \"through\" data for $apiTypeForMessage $apiReference has changed",
             'type' => "Changed type of $apiTypeForMessage $apiReference from $from to $to",

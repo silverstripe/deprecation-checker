@@ -1,0 +1,47 @@
+{
+    "name": "SomeOrg\\Module1\\InternalClass",
+    "line": 6,
+    "short_desc": "",
+    "long_desc": "",
+    "hint": null,
+    "tags": {
+        "internal": [
+            [
+                ""
+            ]
+        ]
+    },
+    "namespace": "SomeOrg\\Module1",
+    "file": "\/var\/www\/html\/tests\/fixture-code\/cloned\/from\/vendor\/some-org\/module1\/code\/InternalClass.php",
+    "relative_file": null,
+    "hash": "e0eb01157fc3cfa95d0e28823c269658ddb2e1d8",
+    "parent": null,
+    "modifiers": 0,
+    "is_trait": false,
+    "is_interface": false,
+    "is_read_only": false,
+    "aliases": [],
+    "errors": [],
+    "interfaces": [],
+    "traits": [],
+    "properties": [],
+    "methods": {
+        "someMethod": {
+            "name": "someMethod",
+            "line": 8,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "see": [],
+            "modifiers": 1,
+            "is_by_ref": "",
+            "is_intersection_type": false,
+            "exceptions": [],
+            "errors": [],
+            "parameters": []
+        }
+    },
+    "constants": []
+}

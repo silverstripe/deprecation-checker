@@ -31,5 +31,9 @@ This tool uses the `composer` binary on your machine directly, so you shouldn't 
 
 - The parsing library used doesn't currently pick up on [enums](https://www.php.net/manual/en/language.types.enumerations.php)
 - The parsing library used doesn't currently pick up on globally-scoped consts
+- The parsing library used doesn't currently handle types on constants
+- The parsing library used detects readonly PHPDocs but not the `readonly` keyword for classes and properties
+- This tool doesn't check YAML files for changes to default values or file/fragment names even through these are in our [definition of public API](https://docs.silverstripe.org/en/project_governance/public_api/)
+- This tool doesn't check calls to `$this->extend()` even through this is in our [definition of public API](https://docs.silverstripe.org/en/project_governance/public_api/)
 - Due to https://github.com/code-lts/doctum/issues/76 types may not evaluate completely to FQCN
 - It's not feasible to get config from `get_extra_config()` for comparing.

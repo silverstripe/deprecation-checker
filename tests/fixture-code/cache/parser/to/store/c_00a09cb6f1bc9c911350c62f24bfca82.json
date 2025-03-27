@@ -1,0 +1,74 @@
+{
+    "name": "SomeOrg\\ToOnly\\SomeClass",
+    "line": 8,
+    "short_desc": "This class shouldn't appear in any of the results, because this isn't a module",
+    "long_desc": "",
+    "hint": null,
+    "tags": [],
+    "namespace": "SomeOrg\\ToOnly",
+    "file": "\/var\/www\/html\/tests\/fixture-code\/cloned\/to\/vendor\/some-org\/to-only\/src\/SomeClass.php",
+    "relative_file": null,
+    "hash": "c43573ceb0d363746610954e23f397135246c53e",
+    "parent": null,
+    "modifiers": 16,
+    "is_trait": false,
+    "is_interface": false,
+    "is_read_only": false,
+    "aliases": [],
+    "errors": [],
+    "interfaces": [],
+    "traits": [],
+    "properties": [],
+    "methods": {
+        "someMethod": {
+            "name": "someMethod",
+            "line": 10,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": [
+                [
+                    "array",
+                    false
+                ],
+                [
+                    "null",
+                    false
+                ]
+            ],
+            "hint_desc": null,
+            "tags": [],
+            "see": [],
+            "modifiers": 26,
+            "is_by_ref": "",
+            "is_intersection_type": false,
+            "exceptions": [],
+            "errors": [],
+            "parameters": {
+                "returnMe": {
+                    "name": "returnMe",
+                    "line": 10,
+                    "short_desc": null,
+                    "long_desc": null,
+                    "hint": [
+                        [
+                            "array",
+                            false
+                        ],
+                        [
+                            "int",
+                            false
+                        ]
+                    ],
+                    "tags": [],
+                    "modifiers": 0,
+                    "default": null,
+                    "variadic": false,
+                    "is_by_ref": false,
+                    "is_read_only": false,
+                    "is_intersection_type": false
+                }
+            }
+        }
+    },
+    "constants": []
+}

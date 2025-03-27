@@ -1,6 +1,6 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Compare;
+namespace SilverStripe\DeprecationChangelogGenerator\Compare;
 
 use Doctum\Project;
 use Doctum\Reflection\ClassReflection;

@@ -1,11 +1,11 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Parse;
+namespace SilverStripe\DeprecationChangelogGenerator\Parse;
 
 use Doctum\Version\Version;
 use Doctum\Version\VersionCollection;
-use Silverstripe\DeprecationChangelogGenerator\Command\CloneCommand;
-use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
+use SilverStripe\DeprecationChangelogGenerator\Command\CloneCommand;
+use SilverStripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
 use Symfony\Component\Filesystem\Path;
 
 /**
@@ -15,7 +15,7 @@ class RecipeVersionCollection extends VersionCollection
 {
     private ?Version $version = null;
 
-    private array $supportedModules;
+    private array $supportedModules = [];
 
     private string $basePath;
 

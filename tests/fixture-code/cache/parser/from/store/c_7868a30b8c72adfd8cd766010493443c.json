@@ -1,0 +1,1744 @@
+{
+    "name": "SomeOrg\\Module1\\Model\\ModelOne",
+    "line": 14,
+    "short_desc": "Note that the method and property below are not counted because they're just IDE hints, not real API.",
+    "long_desc": "",
+    "hint": null,
+    "tags": {
+        "method": [
+            [
+                "string",
+                "fakeMethod()"
+            ]
+        ],
+        "property": [
+            [
+                [],
+                "fakeProperty",
+                ""
+            ]
+        ]
+    },
+    "namespace": "SomeOrg\\Module1\\Model",
+    "file": "\/var\/www\/html\/tests\/fixture-code\/cloned\/from\/vendor\/some-org\/module1\/code\/Model\/ModelOne.php",
+    "relative_file": null,
+    "hash": "f6ed4dd344879fb9fc720ae341b7914215735890",
+    "parent": "SilverStripe\\ORM\\DataObject",
+    "modifiers": 0,
+    "is_trait": false,
+    "is_interface": false,
+    "is_read_only": false,
+    "aliases": {
+        "DataObject": "SilverStripe\\ORM\\DataObject",
+        "Member": "SilverStripe\\Security\\Member"
+    },
+    "errors": [],
+    "interfaces": [],
+    "traits": [],
+    "properties": {
+        "someProperty": {
+            "name": "someProperty",
+            "line": 16,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": [
+                [
+                    "bool",
+                    false
+                ]
+            ],
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 1,
+            "default": null,
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "wasProtected": {
+            "name": "wasProtected",
+            "line": 18,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 2,
+            "default": {
+                "nodeType": "Scalar_String",
+                "attributes": {
+                    "startLine": 18,
+                    "endLine": 18,
+                    "kind": 1,
+                    "rawValue": "'oooh'"
+                },
+                "value": "oooh"
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "someConfig": {
+            "name": "someConfig",
+            "line": 22,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": [
+                [
+                    "string",
+                    false
+                ]
+            ],
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Scalar_String",
+                "attributes": {
+                    "startLine": 22,
+                    "endLine": 22,
+                    "kind": 1,
+                    "rawValue": "'abc123'"
+                },
+                "value": "abc123"
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "ignoreInternal": {
+            "name": "ignoreInternal",
+            "line": 25,
+            "short_desc": "",
+            "long_desc": "",
+            "hint": [
+                [
+                    "array",
+                    false
+                ]
+            ],
+            "hint_desc": null,
+            "tags": {
+                "internal": [
+                    [
+                        ""
+                    ]
+                ]
+            },
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 25,
+                    "endLine": 25,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 25,
+                            "endLine": 25
+                        },
+                        "key": null,
+                        "value": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 25,
+                                "endLine": 25,
+                                "kind": 1,
+                                "rawValue": "'wow'"
+                            },
+                            "value": "wow"
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "db": {
+            "name": "db",
+            "line": 27,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 27,
+                    "endLine": 30,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 28,
+                            "endLine": 28
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 28,
+                                "endLine": 28,
+                                "kind": 1,
+                                "rawValue": "'FieldOne'"
+                            },
+                            "value": "FieldOne"
+                        },
+                        "value": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 28,
+                                "endLine": 28,
+                                "kind": 1,
+                                "rawValue": "'Varchar'"
+                            },
+                            "value": "Varchar"
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 29,
+                            "endLine": 29
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 29,
+                                "endLine": 29,
+                                "kind": 1,
+                                "rawValue": "'FieldTwo'"
+                            },
+                            "value": "FieldTwo"
+                        },
+                        "value": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 29,
+                                "endLine": 29,
+                                "kind": 1,
+                                "rawValue": "'Enum(\"Red,Blue,Green\",\"Blue\")'"
+                            },
+                            "value": "Enum(\"Red,Blue,Green\",\"Blue\")"
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "fixed_fields": {
+            "name": "fixed_fields",
+            "line": 32,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 32,
+                    "endLine": 34,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 33,
+                            "endLine": 33
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 33,
+                                "endLine": 33,
+                                "kind": 1,
+                                "rawValue": "'SomeField'"
+                            },
+                            "value": "SomeField"
+                        },
+                        "value": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 33,
+                                "endLine": 33,
+                                "kind": 1,
+                                "rawValue": "'SomeSpec'"
+                            },
+                            "value": "SomeSpec"
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "has_one": {
+            "name": "has_one",
+            "line": 36,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 36,
+                    "endLine": 50,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 37,
+                            "endLine": 37
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 37,
+                                "endLine": 37,
+                                "kind": 1,
+                                "rawValue": "'FirstRelation'"
+                            },
+                            "value": "FirstRelation"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 37,
+                                "endLine": 37
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 37,
+                                    "endLine": 37
+                                },
+                                "parts": [
+                                    "SilverStripe",
+                                    "Security",
+                                    "Member"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 37,
+                                    "endLine": 37
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 38,
+                            "endLine": 41
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 38,
+                                "endLine": 38,
+                                "kind": 1,
+                                "rawValue": "'SecondRelation'"
+                            },
+                            "value": "SecondRelation"
+                        },
+                        "value": {
+                            "nodeType": "Expr_Array",
+                            "attributes": {
+                                "startLine": 38,
+                                "endLine": 41,
+                                "kind": 2
+                            },
+                            "items": [
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 39,
+                                        "endLine": 39
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 39,
+                                            "endLine": 39,
+                                            "kind": 1,
+                                            "rawValue": "'class'"
+                                        },
+                                        "value": "class"
+                                    },
+                                    "value": {
+                                        "nodeType": "Expr_ClassConstFetch",
+                                        "attributes": {
+                                            "startLine": 39,
+                                            "endLine": 39
+                                        },
+                                        "class": {
+                                            "nodeType": "Name_FullyQualified",
+                                            "attributes": {
+                                                "startLine": 39,
+                                                "endLine": 39
+                                            },
+                                            "parts": [
+                                                "SilverStripe",
+                                                "ORM",
+                                                "DataObject"
+                                            ]
+                                        },
+                                        "name": {
+                                            "nodeType": "Identifier",
+                                            "attributes": {
+                                                "startLine": 39,
+                                                "endLine": 39
+                                            },
+                                            "name": "class"
+                                        }
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                },
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 40,
+                                        "endLine": 40
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 40,
+                                            "endLine": 40,
+                                            "kind": 1,
+                                            "rawValue": "'multirelational'"
+                                        },
+                                        "value": "multirelational"
+                                    },
+                                    "value": {
+                                        "nodeType": "Expr_ConstFetch",
+                                        "attributes": {
+                                            "startLine": 40,
+                                            "endLine": 40
+                                        },
+                                        "name": {
+                                            "nodeType": "Name",
+                                            "attributes": {
+                                                "startLine": 40,
+                                                "endLine": 40,
+                                                "namespacedName": {
+                                                    "nodeType": "Name_FullyQualified",
+                                                    "attributes": {
+                                                        "startLine": 40,
+                                                        "endLine": 40
+                                                    },
+                                                    "parts": [
+                                                        "SomeOrg",
+                                                        "Module1",
+                                                        "Model",
+                                                        "false"
+                                                    ]
+                                                }
+                                            },
+                                            "parts": [
+                                                "false"
+                                            ]
+                                        }
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                }
+                            ]
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 42,
+                            "endLine": 45
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 42,
+                                "endLine": 42,
+                                "kind": 1,
+                                "rawValue": "'ThirdRelation'"
+                            },
+                            "value": "ThirdRelation"
+                        },
+                        "value": {
+                            "nodeType": "Expr_Array",
+                            "attributes": {
+                                "startLine": 42,
+                                "endLine": 45,
+                                "kind": 2
+                            },
+                            "items": [
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 43,
+                                        "endLine": 43
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 43,
+                                            "endLine": 43,
+                                            "kind": 1,
+                                            "rawValue": "'class'"
+                                        },
+                                        "value": "class"
+                                    },
+                                    "value": {
+                                        "nodeType": "Expr_ClassConstFetch",
+                                        "attributes": {
+                                            "startLine": 43,
+                                            "endLine": 43
+                                        },
+                                        "class": {
+                                            "nodeType": "Name_FullyQualified",
+                                            "attributes": {
+                                                "startLine": 43,
+                                                "endLine": 43
+                                            },
+                                            "parts": [
+                                                "SilverStripe",
+                                                "ORM",
+                                                "DataObject"
+                                            ]
+                                        },
+                                        "name": {
+                                            "nodeType": "Identifier",
+                                            "attributes": {
+                                                "startLine": 43,
+                                                "endLine": 43
+                                            },
+                                            "name": "class"
+                                        }
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                },
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 44,
+                                        "endLine": 44
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 44,
+                                            "endLine": 44,
+                                            "kind": 1,
+                                            "rawValue": "'multirelational'"
+                                        },
+                                        "value": "multirelational"
+                                    },
+                                    "value": {
+                                        "nodeType": "Expr_ConstFetch",
+                                        "attributes": {
+                                            "startLine": 44,
+                                            "endLine": 44
+                                        },
+                                        "name": {
+                                            "nodeType": "Name",
+                                            "attributes": {
+                                                "startLine": 44,
+                                                "endLine": 44,
+                                                "namespacedName": {
+                                                    "nodeType": "Name_FullyQualified",
+                                                    "attributes": {
+                                                        "startLine": 44,
+                                                        "endLine": 44
+                                                    },
+                                                    "parts": [
+                                                        "SomeOrg",
+                                                        "Module1",
+                                                        "Model",
+                                                        "true"
+                                                    ]
+                                                }
+                                            },
+                                            "parts": [
+                                                "true"
+                                            ]
+                                        }
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                }
+                            ]
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 46,
+                            "endLine": 49
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 46,
+                                "endLine": 46,
+                                "kind": 1,
+                                "rawValue": "'FourthRelation'"
+                            },
+                            "value": "FourthRelation"
+                        },
+                        "value": {
+                            "nodeType": "Expr_Array",
+                            "attributes": {
+                                "startLine": 46,
+                                "endLine": 49,
+                                "kind": 2
+                            },
+                            "items": [
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 47,
+                                        "endLine": 47
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 47,
+                                            "endLine": 47,
+                                            "kind": 1,
+                                            "rawValue": "'class'"
+                                        },
+                                        "value": "class"
+                                    },
+                                    "value": {
+                                        "nodeType": "Expr_ClassConstFetch",
+                                        "attributes": {
+                                            "startLine": 47,
+                                            "endLine": 47
+                                        },
+                                        "class": {
+                                            "nodeType": "Name_FullyQualified",
+                                            "attributes": {
+                                                "startLine": 47,
+                                                "endLine": 47
+                                            },
+                                            "parts": [
+                                                "SilverStripe",
+                                                "Security",
+                                                "Member"
+                                            ]
+                                        },
+                                        "name": {
+                                            "nodeType": "Identifier",
+                                            "attributes": {
+                                                "startLine": 47,
+                                                "endLine": 47
+                                            },
+                                            "name": "class"
+                                        }
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                },
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 48,
+                                        "endLine": 48
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 48,
+                                            "endLine": 48,
+                                            "kind": 1,
+                                            "rawValue": "'multirelational'"
+                                        },
+                                        "value": "multirelational"
+                                    },
+                                    "value": {
+                                        "nodeType": "Expr_ConstFetch",
+                                        "attributes": {
+                                            "startLine": 48,
+                                            "endLine": 48
+                                        },
+                                        "name": {
+                                            "nodeType": "Name",
+                                            "attributes": {
+                                                "startLine": 48,
+                                                "endLine": 48,
+                                                "namespacedName": {
+                                                    "nodeType": "Name_FullyQualified",
+                                                    "attributes": {
+                                                        "startLine": 48,
+                                                        "endLine": 48
+                                                    },
+                                                    "parts": [
+                                                        "SomeOrg",
+                                                        "Module1",
+                                                        "Model",
+                                                        "true"
+                                                    ]
+                                                }
+                                            },
+                                            "parts": [
+                                                "true"
+                                            ]
+                                        }
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                }
+                            ]
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "has_many": {
+            "name": "has_many",
+            "line": 52,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 52,
+                    "endLine": 56,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 53,
+                            "endLine": 53
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 53,
+                                "endLine": 53,
+                                "kind": 1,
+                                "rawValue": "'HasManyOne'"
+                            },
+                            "value": "HasManyOne"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 53,
+                                "endLine": 53
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 53,
+                                    "endLine": 53
+                                },
+                                "parts": [
+                                    "SilverStripe",
+                                    "Security",
+                                    "Member"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 53,
+                                    "endLine": 53
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 54,
+                            "endLine": 54
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 54,
+                                "endLine": 54,
+                                "kind": 1,
+                                "rawValue": "'HasManyTwo'"
+                            },
+                            "value": "HasManyTwo"
+                        },
+                        "value": {
+                            "nodeType": "Expr_BinaryOp_Concat",
+                            "attributes": {
+                                "startLine": 54,
+                                "endLine": 54
+                            },
+                            "left": {
+                                "nodeType": "Expr_ClassConstFetch",
+                                "attributes": {
+                                    "startLine": 54,
+                                    "endLine": 54
+                                },
+                                "class": {
+                                    "nodeType": "Name_FullyQualified",
+                                    "attributes": {
+                                        "startLine": 54,
+                                        "endLine": 54
+                                    },
+                                    "parts": [
+                                        "SomeOrg",
+                                        "Module1",
+                                        "Model",
+                                        "ModelTwo"
+                                    ]
+                                },
+                                "name": {
+                                    "nodeType": "Identifier",
+                                    "attributes": {
+                                        "startLine": 54,
+                                        "endLine": 54
+                                    },
+                                    "name": "class"
+                                }
+                            },
+                            "right": {
+                                "nodeType": "Scalar_String",
+                                "attributes": {
+                                    "startLine": 54,
+                                    "endLine": 54,
+                                    "kind": 1,
+                                    "rawValue": "'.SomeRelation'"
+                                },
+                                "value": ".SomeRelation"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 55,
+                            "endLine": 55
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 55,
+                                "endLine": 55,
+                                "kind": 1,
+                                "rawValue": "'HasManyThree'"
+                            },
+                            "value": "HasManyThree"
+                        },
+                        "value": {
+                            "nodeType": "Expr_BinaryOp_Concat",
+                            "attributes": {
+                                "startLine": 55,
+                                "endLine": 55
+                            },
+                            "left": {
+                                "nodeType": "Scalar_MagicConst_Class",
+                                "attributes": {
+                                    "startLine": 55,
+                                    "endLine": 55
+                                }
+                            },
+                            "right": {
+                                "nodeType": "Scalar_String",
+                                "attributes": {
+                                    "startLine": 55,
+                                    "endLine": 55,
+                                    "kind": 1,
+                                    "rawValue": "'.FirstRelation'"
+                                },
+                                "value": ".FirstRelation"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "many_many": {
+            "name": "many_many",
+            "line": 58,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 58,
+                    "endLine": 71,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 59,
+                            "endLine": 59
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 59,
+                                "endLine": 59,
+                                "kind": 1,
+                                "rawValue": "'ManyManyOne'"
+                            },
+                            "value": "ManyManyOne"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 59,
+                                "endLine": 59
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 59,
+                                    "endLine": 59
+                                },
+                                "parts": [
+                                    "SomeOrg",
+                                    "Module1",
+                                    "Model",
+                                    "ModelOne"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 59,
+                                    "endLine": 59
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 60,
+                            "endLine": 64
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 60,
+                                "endLine": 60,
+                                "kind": 1,
+                                "rawValue": "'ManyManyTwo'"
+                            },
+                            "value": "ManyManyTwo"
+                        },
+                        "value": {
+                            "nodeType": "Expr_Array",
+                            "attributes": {
+                                "startLine": 60,
+                                "endLine": 64,
+                                "kind": 2
+                            },
+                            "items": [
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 61,
+                                        "endLine": 61
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 61,
+                                            "endLine": 61,
+                                            "kind": 1,
+                                            "rawValue": "'through'"
+                                        },
+                                        "value": "through"
+                                    },
+                                    "value": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 61,
+                                            "endLine": 61,
+                                            "kind": 1,
+                                            "rawValue": "'SomeOtherOrg\\SomeNamespace\\SomeClass'"
+                                        },
+                                        "value": "SomeOtherOrg\\SomeNamespace\\SomeClass"
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                },
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 62,
+                                        "endLine": 62
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 62,
+                                            "endLine": 62,
+                                            "kind": 1,
+                                            "rawValue": "'from'"
+                                        },
+                                        "value": "from"
+                                    },
+                                    "value": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 62,
+                                            "endLine": 62,
+                                            "kind": 1,
+                                            "rawValue": "'Team'"
+                                        },
+                                        "value": "Team"
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                },
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 63,
+                                        "endLine": 63
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 63,
+                                            "endLine": 63,
+                                            "kind": 1,
+                                            "rawValue": "'to'"
+                                        },
+                                        "value": "to"
+                                    },
+                                    "value": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 63,
+                                            "endLine": 63,
+                                            "kind": 1,
+                                            "rawValue": "'Supporter'"
+                                        },
+                                        "value": "Supporter"
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                }
+                            ]
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 65,
+                            "endLine": 69
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 65,
+                                "endLine": 65,
+                                "kind": 1,
+                                "rawValue": "'ManyManyThree'"
+                            },
+                            "value": "ManyManyThree"
+                        },
+                        "value": {
+                            "nodeType": "Expr_Array",
+                            "attributes": {
+                                "startLine": 65,
+                                "endLine": 69,
+                                "kind": 2
+                            },
+                            "items": [
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 66,
+                                        "endLine": 66
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 66,
+                                            "endLine": 66,
+                                            "kind": 1,
+                                            "rawValue": "'through'"
+                                        },
+                                        "value": "through"
+                                    },
+                                    "value": {
+                                        "nodeType": "Expr_ClassConstFetch",
+                                        "attributes": {
+                                            "startLine": 66,
+                                            "endLine": 66
+                                        },
+                                        "class": {
+                                            "nodeType": "Name_FullyQualified",
+                                            "attributes": {
+                                                "startLine": 66,
+                                                "endLine": 66
+                                            },
+                                            "parts": [
+                                                "SilverStripe",
+                                                "ORM",
+                                                "DataObject"
+                                            ]
+                                        },
+                                        "name": {
+                                            "nodeType": "Identifier",
+                                            "attributes": {
+                                                "startLine": 66,
+                                                "endLine": 66
+                                            },
+                                            "name": "class"
+                                        }
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                },
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 67,
+                                        "endLine": 67
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 67,
+                                            "endLine": 67,
+                                            "kind": 1,
+                                            "rawValue": "'from'"
+                                        },
+                                        "value": "from"
+                                    },
+                                    "value": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 67,
+                                            "endLine": 67,
+                                            "kind": 1,
+                                            "rawValue": "'Team'"
+                                        },
+                                        "value": "Team"
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                },
+                                {
+                                    "nodeType": "Expr_ArrayItem",
+                                    "attributes": {
+                                        "startLine": 68,
+                                        "endLine": 68
+                                    },
+                                    "key": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 68,
+                                            "endLine": 68,
+                                            "kind": 1,
+                                            "rawValue": "'to'"
+                                        },
+                                        "value": "to"
+                                    },
+                                    "value": {
+                                        "nodeType": "Scalar_String",
+                                        "attributes": {
+                                            "startLine": 68,
+                                            "endLine": 68,
+                                            "kind": 1,
+                                            "rawValue": "'Supporter'"
+                                        },
+                                        "value": "Supporter"
+                                    },
+                                    "byRef": false,
+                                    "unpack": false
+                                }
+                            ]
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 70,
+                            "endLine": 70
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 70,
+                                "endLine": 70,
+                                "kind": 1,
+                                "rawValue": "'ManyManyFour'"
+                            },
+                            "value": "ManyManyFour"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 70,
+                                "endLine": 70
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 70,
+                                    "endLine": 70
+                                },
+                                "parts": [
+                                    "SilverStripe",
+                                    "Security",
+                                    "Member"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 70,
+                                    "endLine": 70
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "belongs_to": {
+            "name": "belongs_to",
+            "line": 73,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 73,
+                    "endLine": 76,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 74,
+                            "endLine": 74
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 74,
+                                "endLine": 74,
+                                "kind": 1,
+                                "rawValue": "'BelongsToOne'"
+                            },
+                            "value": "BelongsToOne"
+                        },
+                        "value": {
+                            "nodeType": "Expr_BinaryOp_Concat",
+                            "attributes": {
+                                "startLine": 74,
+                                "endLine": 74
+                            },
+                            "left": {
+                                "nodeType": "Expr_ClassConstFetch",
+                                "attributes": {
+                                    "startLine": 74,
+                                    "endLine": 74
+                                },
+                                "class": {
+                                    "nodeType": "Name_FullyQualified",
+                                    "attributes": {
+                                        "startLine": 74,
+                                        "endLine": 74
+                                    },
+                                    "parts": [
+                                        "SilverStripe",
+                                        "Security",
+                                        "Member"
+                                    ]
+                                },
+                                "name": {
+                                    "nodeType": "Identifier",
+                                    "attributes": {
+                                        "startLine": 74,
+                                        "endLine": 74
+                                    },
+                                    "name": "class"
+                                }
+                            },
+                            "right": {
+                                "nodeType": "Scalar_String",
+                                "attributes": {
+                                    "startLine": 74,
+                                    "endLine": 74,
+                                    "kind": 1,
+                                    "rawValue": "'.SomeRelation'"
+                                },
+                                "value": ".SomeRelation"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 75,
+                            "endLine": 75
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 75,
+                                "endLine": 75,
+                                "kind": 1,
+                                "rawValue": "'BelongsToTwo'"
+                            },
+                            "value": "BelongsToTwo"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 75,
+                                "endLine": 75
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 75,
+                                    "endLine": 75
+                                },
+                                "parts": [
+                                    "SomeOrg",
+                                    "Module1",
+                                    "Model",
+                                    "ModelTwo"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 75,
+                                    "endLine": 75
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "belongs_many_many": {
+            "name": "belongs_many_many",
+            "line": 78,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 78,
+                    "endLine": 81,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 79,
+                            "endLine": 79
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 79,
+                                "endLine": 79,
+                                "kind": 1,
+                                "rawValue": "'BelongsManyOne'"
+                            },
+                            "value": "BelongsManyOne"
+                        },
+                        "value": {
+                            "nodeType": "Expr_BinaryOp_Concat",
+                            "attributes": {
+                                "startLine": 79,
+                                "endLine": 79
+                            },
+                            "left": {
+                                "nodeType": "Expr_ClassConstFetch",
+                                "attributes": {
+                                    "startLine": 79,
+                                    "endLine": 79
+                                },
+                                "class": {
+                                    "nodeType": "Name_FullyQualified",
+                                    "attributes": {
+                                        "startLine": 79,
+                                        "endLine": 79
+                                    },
+                                    "parts": [
+                                        "SilverStripe",
+                                        "Security",
+                                        "Member"
+                                    ]
+                                },
+                                "name": {
+                                    "nodeType": "Identifier",
+                                    "attributes": {
+                                        "startLine": 79,
+                                        "endLine": 79
+                                    },
+                                    "name": "class"
+                                }
+                            },
+                            "right": {
+                                "nodeType": "Scalar_String",
+                                "attributes": {
+                                    "startLine": 79,
+                                    "endLine": 79,
+                                    "kind": 1,
+                                    "rawValue": "'.SomeRelation'"
+                                },
+                                "value": ".SomeRelation"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    },
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 80,
+                            "endLine": 80
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 80,
+                                "endLine": 80,
+                                "kind": 1,
+                                "rawValue": "'BelongsManyTwo'"
+                            },
+                            "value": "BelongsManyTwo"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 80,
+                                "endLine": 80
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 80,
+                                    "endLine": 80
+                                },
+                                "parts": [
+                                    "SomeOrg",
+                                    "Module1",
+                                    "Model",
+                                    "ModelTwo"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 80,
+                                    "endLine": 80
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "fakeProperty": {
+            "name": "fakeProperty",
+            "line": 14,
+            "short_desc": "",
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": null,
+            "default": null,
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        }
+    },
+    "methods": {
+        "someMethod": {
+            "name": "someMethod",
+            "line": 83,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": [
+                [
+                    "array",
+                    false
+                ]
+            ],
+            "hint_desc": null,
+            "tags": [],
+            "see": [],
+            "modifiers": 1,
+            "is_by_ref": "",
+            "is_intersection_type": false,
+            "exceptions": [],
+            "errors": [],
+            "parameters": {
+                "returnMe": {
+                    "name": "returnMe",
+                    "line": 83,
+                    "short_desc": null,
+                    "long_desc": null,
+                    "hint": [
+                        [
+                            "array",
+                            false
+                        ]
+                    ],
+                    "tags": [],
+                    "modifiers": 0,
+                    "default": "[]",
+                    "variadic": false,
+                    "is_by_ref": false,
+                    "is_read_only": false,
+                    "is_intersection_type": false
+                }
+            }
+        },
+        "anotherMethod": {
+            "name": "anotherMethod",
+            "line": 88,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "see": [],
+            "modifiers": 1,
+            "is_by_ref": "",
+            "is_intersection_type": false,
+            "exceptions": [],
+            "errors": [],
+            "parameters": {
+                "someParam": {
+                    "name": "someParam",
+                    "line": 88,
+                    "short_desc": null,
+                    "long_desc": null,
+                    "hint": null,
+                    "tags": [],
+                    "modifiers": 0,
+                    "default": null,
+                    "variadic": false,
+                    "is_by_ref": false,
+                    "is_read_only": false,
+                    "is_intersection_type": false
+                },
+                "param2": {
+                    "name": "param2",
+                    "line": 88,
+                    "short_desc": null,
+                    "long_desc": null,
+                    "hint": [
+                        [
+                            "array",
+                            false
+                        ]
+                    ],
+                    "tags": [],
+                    "modifiers": 0,
+                    "default": "[]",
+                    "variadic": false,
+                    "is_by_ref": true,
+                    "is_read_only": false,
+                    "is_intersection_type": false
+                }
+            }
+        },
+        "thirdMethod": {
+            "name": "thirdMethod",
+            "line": 98,
+            "short_desc": "Note that the PHPDoc param and return type will be ignored",
+            "long_desc": "",
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "see": [],
+            "modifiers": 10,
+            "is_by_ref": "",
+            "is_intersection_type": false,
+            "exceptions": [],
+            "errors": [],
+            "parameters": {
+                "param": {
+                    "name": "param",
+                    "line": 98,
+                    "short_desc": null,
+                    "long_desc": null,
+                    "hint": [
+                        [
+                            "string",
+                            false
+                        ]
+                    ],
+                    "tags": [],
+                    "modifiers": 0,
+                    "default": "null",
+                    "variadic": false,
+                    "is_by_ref": false,
+                    "is_read_only": false,
+                    "is_intersection_type": false
+                }
+            }
+        },
+        "internalMethod": {
+            "name": "internalMethod",
+            "line": 104,
+            "short_desc": "",
+            "long_desc": "",
+            "hint": null,
+            "hint_desc": null,
+            "tags": {
+                "internal": [
+                    [
+                        ""
+                    ]
+                ]
+            },
+            "see": [],
+            "modifiers": 1,
+            "is_by_ref": "",
+            "is_intersection_type": false,
+            "exceptions": [],
+            "errors": [],
+            "parameters": []
+        },
+        "fakeMethod": {
+            "name": "fakeMethod",
+            "line": 14,
+            "short_desc": "",
+            "long_desc": null,
+            "hint": [
+                [
+                    "string",
+                    null
+                ]
+            ],
+            "hint_desc": null,
+            "tags": [],
+            "see": [],
+            "modifiers": null,
+            "is_by_ref": null,
+            "is_intersection_type": false,
+            "exceptions": [],
+            "errors": [],
+            "parameters": []
+        }
+    },
+    "constants": []
+}

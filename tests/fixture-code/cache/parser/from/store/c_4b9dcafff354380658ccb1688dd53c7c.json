@@ -1,0 +1,170 @@
+{
+    "name": "SomeOrg\\Module1\\Extension\\ExtensionClassTwo",
+    "line": 9,
+    "short_desc": null,
+    "long_desc": null,
+    "hint": null,
+    "tags": [],
+    "namespace": "SomeOrg\\Module1\\Extension",
+    "file": "\/var\/www\/html\/tests\/fixture-code\/cloned\/from\/vendor\/some-org\/module1\/code\/Extension\/ExtensionClassTwo.php",
+    "relative_file": null,
+    "hash": "3a5bf4e2092a0ac098696e992ae2b3a4c4193845",
+    "parent": "SilverStripe\\Core\\Extension",
+    "modifiers": 0,
+    "is_trait": false,
+    "is_interface": false,
+    "is_read_only": false,
+    "aliases": {
+        "Extension": "SilverStripe\\Core\\Extension",
+        "DataObject": "SilverStripe\\ORM\\DataObject",
+        "ModelOne": "SomeOrg\\Module1\\Model\\ModelOne"
+    },
+    "errors": [],
+    "interfaces": [],
+    "traits": [],
+    "properties": {
+        "has_one": {
+            "name": "has_one",
+            "line": 11,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 11,
+                    "endLine": 13,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 12,
+                            "endLine": 12
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 12,
+                                "endLine": 12,
+                                "kind": 1,
+                                "rawValue": "'FromExtensionHasOne'"
+                            },
+                            "value": "FromExtensionHasOne"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 12,
+                                "endLine": 12
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 12,
+                                    "endLine": 12
+                                },
+                                "parts": [
+                                    "SilverStripe",
+                                    "ORM",
+                                    "DataObject"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 12,
+                                    "endLine": 12
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        },
+        "has_many": {
+            "name": "has_many",
+            "line": 15,
+            "short_desc": null,
+            "long_desc": null,
+            "hint": null,
+            "hint_desc": null,
+            "tags": [],
+            "modifiers": 12,
+            "default": {
+                "nodeType": "Expr_Array",
+                "attributes": {
+                    "startLine": 15,
+                    "endLine": 17,
+                    "kind": 2
+                },
+                "items": [
+                    {
+                        "nodeType": "Expr_ArrayItem",
+                        "attributes": {
+                            "startLine": 16,
+                            "endLine": 16
+                        },
+                        "key": {
+                            "nodeType": "Scalar_String",
+                            "attributes": {
+                                "startLine": 16,
+                                "endLine": 16,
+                                "kind": 1,
+                                "rawValue": "'FromExtensionHasMany'"
+                            },
+                            "value": "FromExtensionHasMany"
+                        },
+                        "value": {
+                            "nodeType": "Expr_ClassConstFetch",
+                            "attributes": {
+                                "startLine": 16,
+                                "endLine": 16
+                            },
+                            "class": {
+                                "nodeType": "Name_FullyQualified",
+                                "attributes": {
+                                    "startLine": 16,
+                                    "endLine": 16
+                                },
+                                "parts": [
+                                    "SomeOrg",
+                                    "Module1",
+                                    "Model",
+                                    "ModelOne"
+                                ]
+                            },
+                            "name": {
+                                "nodeType": "Identifier",
+                                "attributes": {
+                                    "startLine": 16,
+                                    "endLine": 16
+                                },
+                                "name": "class"
+                            }
+                        },
+                        "byRef": false,
+                        "unpack": false
+                    }
+                ]
+            },
+            "errors": [],
+            "is_read_only": false,
+            "is_write_only": false,
+            "is_intersection_type": false
+        }
+    },
+    "methods": [],
+    "constants": []
+}

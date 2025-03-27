@@ -1,34 +1,18 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Command;
+namespace SilverStripe\DeprecationChangelogGenerator\Command;
 
 use Composer\Semver\VersionParser;
 use Doctum\Message;
-use Doctum\Parser\ClassVisitor\InheritdocClassVisitor;
-use Doctum\Parser\ClassVisitor\MethodClassVisitor;
-use Doctum\Parser\ClassVisitor\PropertyClassVisitor;
-use Doctum\Parser\CodeParser;
-use Doctum\Parser\NodeVisitor;
 use Doctum\Parser\ParseError;
-use Doctum\Parser\Parser;
-use Doctum\Parser\ParserContext;
-use Doctum\Parser\ProjectTraverser;
 use Doctum\Parser\Transaction;
 use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
-use Doctum\Store\JsonStore;
 use Doctum\Version\Version;
-use PhpParser\NodeTraverser;
-use PhpParser\NodeVisitor\NameResolver;
-use PhpParser\ParserFactory;
-use PhpParser\PrettyPrinter\Standard as PrettyPrinter;
 use RuntimeException;
-use Silverstripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
-use Silverstripe\DeprecationChangelogGenerator\Parse\DocBlockParser;
-use Silverstripe\DeprecationChangelogGenerator\Parse\IncludeConfigFilter;
-use Silverstripe\DeprecationChangelogGenerator\Parse\RecipeFinder;
-use Silverstripe\DeprecationChangelogGenerator\Parse\RecipeVersionCollection;
-use Silverstripe\DeprecationChangelogGenerator\Render\Renderer;
+use SilverStripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
+use SilverStripe\DeprecationChangelogGenerator\Parse\ParserFactory;
+use SilverStripe\DeprecationChangelogGenerator\Render\Renderer;
 use SilverStripe\SupportedModules\BranchLogic;
 use SilverStripe\SupportedModules\MetaData;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -132,14 +116,14 @@ class GenerateCommand extends BaseCommand
         $this->findSupportedModules();
 
         // Parse PHP files in all relevant repositories
-        $parsed = $this->parseModules($dataDir);
+        $project = $this->parseModules($dataDir);
         $parseWarning = $this->handleParseErrors($parseErrorFilePath);
         if ($parseWarning) {
             $warnings[] = $parseWarning;
         }
 
         // Compare versions to find breaking changes and actions needed
-        $this->findBreakingChanges($parsed, $dataDir);
+        $this->findBreakingChanges($project, $dataDir);
         if (!empty($this->actionsToTake)) {
             $numActions = $this->getActionsCount();
             $actionsFile = Path::join($dataDir, GenerateCommand::DIR_OUTPUT, GenerateCommand::FILE_ACTIONS);
@@ -157,7 +141,7 @@ class GenerateCommand extends BaseCommand
 
         // Render changelog chunk
         $this->output->writeln('Rendering...');
-        $renderer = new Renderer($this->metaDataFrom, $this->metaDataTo, $parsed);
+        $renderer = new Renderer($this->metaDataFrom, $this->metaDataTo, $project);
         $renderer->render($this->breakingApiChanges, $dataDir, $changelogPath);
         $this->output->writeln('Rendering complete.');
 
@@ -253,42 +237,9 @@ class GenerateCommand extends BaseCommand
     {
         $this->output->writeln('Parsing modules...');
 
-        $collection = new RecipeVersionCollection($this->supportedModules, $dataDir);
-        $store = new JsonStore();
-        $project = new Project(
-            $store,
-            $collection,
-            [
-                // build_dir shouldn't anything in it - but I'm setting it so that if it DOES output something we'll know.
-                'build_dir' => Path::join($dataDir, 'doctum-output/%version%'),
-                'cache_dir' => Path::join($dataDir, 'cache/parser/%version%'),
-                'include_parent_data' => true,
-            ]
-        );
-        $iterator = new RecipeFinder($collection);
-        $iterator
-            ->files()
-            ->name('*.php')
-            ->exclude('thirdparty')
-            ->exclude('tests');
+        $factory = new ParserFactory($this->supportedModules, $dataDir);
+        $project = $factory->buildProject();
 
-        $parserContext = new ParserContext(new IncludeConfigFilter(), new DocBlockParser(), new PrettyPrinter());
-        $traverser = new NodeTraverser();
-        $traverser->addVisitor(new NameResolver());
-        $traverser->addVisitor(new NodeVisitor($parserContext));
-
-        // NOTE currently the version of the dependency we're using doesn't have PHP 8 as a version, but does correctly parse PHP 8 code.
-        $phpParser = (new ParserFactory())->create(ParserFactory::PREFER_PHP7);
-        $codeParser = new CodeParser($parserContext, $phpParser, $traverser);
-
-        $visitors = [
-            new InheritdocClassVisitor(),
-            new MethodClassVisitor(),
-            new PropertyClassVisitor($parserContext),
-        ];
-        $projectTraverser = new ProjectTraverser($visitors);
-        $parser = new Parser($iterator, $store, $codeParser, $projectTraverser);
-        $project->setParser($parser);
         // @TODO can use callback arg to output current step
         $project->parse(function (string $messageType, mixed $data) {
             // @TODO Probably use a progress bar when not in verbose mode.
@@ -330,7 +281,7 @@ class GenerateCommand extends BaseCommand
                     break;
             }
         });
-        $this->parseErrors = array_merge($this->parseErrors, $iterator->getProblems());
+        $this->parseErrors = array_merge($this->parseErrors, $factory->getFinder()->getProblems());
 
         $this->output->writeln('Parsing complete.');
         return $project;

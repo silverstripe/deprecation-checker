@@ -1,6 +1,6 @@
 <?php
 
-namespace Silverstripe\DeprecationChangelogGenerator\Compare;
+namespace SilverStripe\DeprecationChangelogGenerator\Compare;
 
 use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
@@ -25,7 +25,7 @@ use PhpParser\Node\Scalar\DNumber;
 use PhpParser\Node\Scalar\LNumber;
 use PhpParser\Node\Scalar\MagicConst\Class_;
 use PhpParser\Node\Scalar\String_;
-use Silverstripe\DeprecationChangelogGenerator\Command\CloneCommand;
+use SilverStripe\DeprecationChangelogGenerator\Command\CloneCommand;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -173,13 +173,11 @@ class BreakingChangesComparer
         $dataFrom = [
             'name' => $name,
             'file' => $fileFrom,
-            'line' => $functionFrom->getLine(),
             'apiType' => 'function',
         ];
         $dataTo = [
             'name' => $name,
             'file' => $fileTo,
-            'line' => $functionTo?->getLine(),
             'apiType' => 'function',
         ];
 
@@ -196,7 +194,7 @@ class BreakingChangesComparer
             $ref = $this->getRefFromReflection($functionTo);
             $this->breakingChanges[$module]['returnByRef'][$type][$ref] = [
                 ...$dataTo,
-                'isNow' => $functionTo->isByRef(),
+                'isNow' => (bool) $functionTo->isByRef(),
             ];
         }
 
@@ -239,13 +237,11 @@ class BreakingChangesComparer
         $dataFrom = [
             'name' => $fqcn,
             'file' => $fileFrom,
-            'line' => $classFrom->getLine(),
             'apiType' => $apiTypeFrom,
         ];
         $dataTo = [
             'name' => $fqcn,
             'file' => $fileTo,
-            'line' => $classTo?->getLine(),
             'apiType' => $apiTypeTo,
         ];
 
@@ -267,11 +263,19 @@ class BreakingChangesComparer
             ];
         }
 
+        if ($classFrom->isReadOnly() !== $classTo->isReadOnly()) {
+            $this->breakingChanges[$module]['readonly'][$type][$fqcn] = [
+                ...$dataTo,
+                'isNow' => $classTo->isReadOnly(),
+            ];
+        }
+
         $this->checkConstants($fqcn, $classFrom->getConstants(true), $classTo->getConstants(true), $module);
         $this->checkProperties($fqcn, $classFrom->getProperties(true), $classTo->getProperties(true), $module);
         $this->checkMethods($fqcn, $classFrom->getMethods(true), $classTo->getMethods(true), $classTo, $module);
 
-        if ($this->instanceOf($classFrom, 'SilverStripe\ORM\DataObject')) {
+        // Extensions and DataObjects can define database fields and relations
+        if ($this->instanceOf($classFrom, 'SilverStripe\ORM\DataObject') || $this->instanceOf($classFrom, 'SilverStripe\Core\Extension')) {
             $this->checkDbFieldsAndRelations($fqcn, $classFrom, $classTo, $module);
         }
     }
@@ -326,20 +330,24 @@ class BreakingChangesComparer
             $value = $extensionRaw['value'];
             // This is the type for PhpParser\Node\Expr\ClassConstFetch i.e. SomeClass::class
             if ($value['nodeType'] !== 'Expr_ClassConstFetch') {
-                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
-                    ...$data,
-                    'message' => 'The value for the $extensions configuration property has an unexpected format or type.',
-                ];
+                if (!empty($data)) {
+                    $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
+                        ...$data,
+                        'message' => 'The value for the $extensions configuration property has an unexpected format or type.',
+                    ];
+                }
                 continue;
             }
             // Get reflection object for the extension class
             $extensionFQCN = implode('\\', $value['class']['parts']);
             $extension = $class->getProject()->getClass($extensionFQCN);
             if (!$this->apiExists($extension)) {
-                $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
-                    ...$data,
-                    'message' => "The '$extensionFQCN' class referenced in the \$extensions configuration property doesn't exist.",
-                ];
+                if (!empty($data)) {
+                    $this->actionsToTake[$module][BreakingChangesComparer::ACTION_DEPRECATE][$type][$ref] = [
+                        ...$data,
+                        'message' => "The '$extensionFQCN' class referenced in the \$extensions configuration property doesn't exist.",
+                    ];
+                }
                 continue;
             }
             $extensions[$extensionFQCN] = $extension;
@@ -389,7 +397,6 @@ class BreakingChangesComparer
         $dataFrom = [
             'name' => $name,
             'file' => $fileFrom,
-            'line' => $constFrom->getLine(),
             'class' => $classFrom?->getName(),
             'apiType' => 'constant',
         ];
@@ -399,7 +406,6 @@ class BreakingChangesComparer
         $dataTo = [
             'name' => $name,
             'file' => $fileTo,
-            'line' => $constTo?->getLine(),
             // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
             // It's possible for example that the code was refactored into a trait in the new version which would
             // result in $classTo being the trait, NOT the class we're actually looking at.
@@ -459,7 +465,6 @@ class BreakingChangesComparer
         $dataFrom = [
             'name' => $name,
             'file' => $fileFrom,
-            'line' => $propertyFrom->getLine(),
             'class' => $classFrom?->getName(),
             'apiType' => $this->propertyIsConfig($propertyFrom) ? 'config' : 'property',
         ];
@@ -469,7 +474,6 @@ class BreakingChangesComparer
         $dataTo = [
             'name' => $name,
             'file' => $fileTo,
-            'line' => $propertyTo?->getLine(),
             // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
             // It's possible for example that the code was refactored into a trait in the new version which would
             // result in $classTo being the trait, NOT the class we're actually looking at.
@@ -492,10 +496,10 @@ class BreakingChangesComparer
             ];
         }
 
-        // Skip checking value changes for DataObject database fields and relations.
+        // Skip checking value changes for database fields and relations.
         // Those are specifically checked in more detail in a separate step.
-        if ($this->instanceOf($classFrom, 'SilverStripe\ORM\DataObject')
-            && in_array($name, BreakingChangesComparer::DB_AND_RELATION)
+        if (in_array($name, BreakingChangesComparer::DB_AND_RELATION) &&
+            ($this->instanceOf($classFrom, 'SilverStripe\ORM\DataObject') || $this->instanceOf($classFrom, 'SilverStripe\Core\Extension'))
         ) {
             return;
         }
@@ -584,7 +588,6 @@ class BreakingChangesComparer
         $dataFrom = [
             'name' => $name,
             'file' => $fileFrom,
-            'line' => $methodFrom->getLine(),
             'class' => $classFrom?->getName(),
             'apiType' => 'method',
         ];
@@ -593,7 +596,6 @@ class BreakingChangesComparer
         $dataTo = [
             'name' => $name,
             'file' => $fileTo,
-            'line' => $methodTo?->getLine(),
             // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
             // It's possible for example that the code was refactored into a trait in the new version which would
             // result in $classTo being the trait, NOT the class we're actually looking at.
@@ -608,13 +610,23 @@ class BreakingChangesComparer
 
         $this->checkForSignatureChanges($methodFrom, $methodTo, $dataTo, $module);
 
+        // Check if the method changed whether it's static
+        if ($methodFrom->isStatic() !== $methodTo->isStatic()) {
+            $type = $this->getTypeFromReflection($methodTo);
+            $ref = $this->getRefFromReflection($methodTo);
+            $this->breakingChanges[$module]['static'][$type][$ref] = [
+                ...$dataTo,
+                'isNow' => $methodTo->isStatic(),
+            ];
+        }
+
         // Changed whether it's passed by reference (preceeded with `&`) or not
         if ($methodFrom->isByRef() !== $methodTo->isByRef()) {
             $type = $this->getTypeFromReflection($methodTo);
             $ref = $this->getRefFromReflection($methodTo);
             $this->breakingChanges[$module]['returnByRef'][$type][$ref] = [
                 ...$dataTo,
-                'isNow' => $methodTo->isByRef(),
+                'isNow' => (bool) $methodTo->isByRef(),
             ];
         }
 
@@ -626,7 +638,6 @@ class BreakingChangesComparer
      */
     private function checkDbFieldsAndRelations(string $fqcn, ClassReflection $classFrom, ClassReflection $classTo, string $module): void
     {
-        // @TODO check these all work
         $baseRef = $this->getRefFromReflection($classFrom);
 
         // Check $db
@@ -827,13 +838,11 @@ class BreakingChangesComparer
     private function getArrayConfigValue(ClassReflection $class, string $property, string $module)
     {
         $properties = [];
-        // @TODO $data
         $extensions = $this->getExtensions($class, [], $module);
         foreach ($extensions as $extension) {
             $properties[] = $extension->getProperties(true)[$property] ?? null;
         }
-        // Add property from class last, as it will override any extensions
-        // @TODO confirm that
+        // Add property from class last, as it has higher priority than extension config
         $properties[] = $class->getProperties(true)[$property] ?? null;
 
         $value = [];
@@ -882,10 +891,25 @@ class BreakingChangesComparer
                 'hintOrig' => $newParam->getHintAsString(),
                 'function' => $newParam->getFunction()?->getName(),
                 'method' => $newParam->getMethod()?->getName(),
-                'class' => $newParam->getClass()?->getName(),
+                'class' => $this->getClassFromParam($newParam)?->getName(),
                 'apiType' => 'parameter',
             ];
         }
+    }
+
+    /**
+     * Get the class a parameter belongs to, if there is one.
+     */
+    private function getClassFromParam(?ParameterReflection $reflection): ?ClassReflection
+    {
+        if (!$reflection) {
+            return null;
+        }
+        // Internally the reflection calls `$this->method->getClass()` - so if there's no method we get an error.
+        if (!$reflection->getMethod()) {
+            return null;
+        }
+        return $reflection->getClass();
     }
 
     /**
@@ -905,24 +929,22 @@ class BreakingChangesComparer
     ): void {
         $this->output->writeln("Checking parameter $name", OutputInterface::VERBOSITY_VERY_VERBOSE);
         // The getClass() method will check against the method, so we have to check if the method's there or not first.
-        $classFrom = $parameterFrom->getMethod() ? $parameterFrom->getClass() : null;
+        $classFrom = $this->getClassFromParam($parameterFrom);
         $fileFrom = $classFrom ? $classFrom->getFile() : $parameterFrom->getFunction()?->getFile();
         $type = $this->getTypeFromReflection($parameterFrom);
         $dataFrom = [
             'name' => $name,
             'file' => $fileFrom,
-            'line' => $parameterFrom->getLine(),
             'function' => $parameterFrom->getFunction()?->getName(),
             'method' => $parameterFrom->getMethod()?->getName(),
             'class' => $classFrom?->getName(),
             'apiType' => 'parameter',
         ];
-        $classTo = $parameterTo?->getMethod() ? $parameterTo?->getClass() : null;
+        $classTo = $this->getClassFromParam($parameterTo);
         $fileTo = $classTo ? $classTo->getFile() : $parameterTo?->getFunction()?->getFile();
         $dataTo = [
             'name' => $name,
             'file' => $fileTo,
-            'line' => $parameterTo?->getLine(),
             'function' => $parameterTo?->getFunction()?->getName(),
             'method' => $parameterTo?->getMethod()?->getName(),
             // Note we intentionally use $classFrom here because that's the reference we want in the changelog.
@@ -999,6 +1021,7 @@ class BreakingChangesComparer
         }
 
         // `string $something = null` is the same as `?string $something = null`
+        // @TODO don't ignore if the `string` part changes - i.e. `?string` and `?int` are not the same!
         if (($parameterFrom->getDefault() === 'null' && $this->hintIsNullable($parameterFrom->getHint()))
             || ($parameterTo->getDefault() === 'null' && $this->hintIsNullable($parameterTo->getHint()))
         ) {
@@ -1070,6 +1093,12 @@ class BreakingChangesComparer
         if ($reflectionTo === null || $dataTo['file'] === null) {
             // If the API was already internal, we don't need to do anything.
             if ($reflectionFrom->isInternal()) {
+                return true;
+            }
+            // If the API was already private (but not config), we don't need to do anything.
+            if ($this->getVisibilityFromReflection($reflectionFrom) === 'private'
+                && (!is_a($reflectionFrom, PropertyReflection::class) || $this->propertyIsConfig($reflectionFrom))
+            ) {
                 return true;
             }
             // Mark whether we still need to deprecate it, and note the breaking change.
@@ -1444,14 +1473,35 @@ class BreakingChangesComparer
         if (!$property) {
             return false;
         }
+        // Configuration can be in extensions even though they don't use the Configurable trait
+        $class = $property->getClass();
+        if (!$this->instanceOf($class, 'SilverStripe\Core\Extension') && !$this->hasTrait($class, 'SilverStripe\Core\Config\Configurable')) {
+            return false;
+        }
         return $property->isPrivate() && $property->isStatic();
     }
 
-    private function instanceOf(ClassReflection $class, string $instanceOf): bool
+    private function instanceOf(?ClassReflection $class, string $instanceOf): bool
     {
+        if (!$class) {
+            return false;
+        }
         $hierarchy = [$class, ...$class->getParent(true)];
         foreach ($hierarchy as $candidate) {
             if ($candidate->getName() === $instanceOf) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function hasTrait(?ClassReflection $class, string $traitName): bool
+    {
+        if (!$class) {
+            return false;
+        }
+        foreach ($class->getTraits(true) as $trait) {
+            if ($trait->getName() === $traitName) {
                 return true;
             }
         }
