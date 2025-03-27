@@ -5,3 +5,4 @@
 /output/
 /cache/
 composer.lock
+.phpunit.result.cache
