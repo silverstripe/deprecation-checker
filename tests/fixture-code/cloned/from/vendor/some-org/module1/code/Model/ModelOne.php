@@ -10,6 +10,7 @@ use SilverStripe\Security\Member;
  *
  * @method string fakeMethod()
  * @property string $fakeProperty
+ * @deprecated This deprecation notice has no version
  */
 class ModelOne extends DataObject
 {

@@ -5,6 +5,9 @@ namespace SomeOrg\Module1\Extension;
 use SilverStripe\Core\Extension;
 use SilverStripe\Security\Member;
 
+/**
+ * @deprecated 1.2.3 I've deprecated this even though it's not removed.
+ */
 class ExtensionClass extends Extension
 {
     private static $db = [

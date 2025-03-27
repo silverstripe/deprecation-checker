@@ -4,6 +4,7 @@ namespace SilverStripe\DeprecationChangelogGenerator\Parse;
 
 use Doctum\Parser\DocBlockParser as BaseParser;
 use phpDocumentor\Reflection\DocBlock\Tag;
+use phpDocumentor\Reflection\DocBlock\Tags\Method;
 use phpDocumentor\Reflection\DocBlock\Tags\Var_;
 use phpDocumentor\Reflection\DocBlock\Tags\Param;
 use phpDocumentor\Reflection\DocBlock\Tags\PropertyRead;
@@ -25,12 +26,17 @@ class DocBlockParser extends BaseParser
             case Var_::class:
             case Return_::class:
                 return null;
+            case Method::class:
+                return [];
             case Property::class:
             case PropertyRead::class:
             case PropertyWrite::class:
+                // The parsing logic expects explicitly to have an array returned for these in this format.
+                /** @var Property|PropertyRead|PropertyWrite $tag */
+                return [[], '', ''];
             case Param::class:
-                // The parsing logic expects explicitly to have an array returned for these
-                // with another array as the first item, the param name as the second, and a string as the third.
+                // The parsing logic expects explicitly to have an array returned for these in this format.
+                // For params it explicitly needs the name of the param to be included.
                 /** @var Property|PropertyRead|PropertyWrite|Param $tag */
                 return [[], ltrim($tag->getVariableName() ?? '', '$'), ''];
         }

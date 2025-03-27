@@ -2,6 +2,9 @@
 
 namespace SomeOrg\Module1;
 
+/**
+ * @deprecated 1.2.3 This interface has been deprecated, hurray!
+ */
 interface SomeInterfaceTwo
 {
     public bool $someProperty;

@@ -10,6 +10,9 @@ final class DataObjectOne extends DataObject
 
     private static int $config2 = 2;
 
+    /**
+     * @deprecated 1.2.3 Will be removed without a replacement
+     */
     private static $config3;
 
     private static $config4;

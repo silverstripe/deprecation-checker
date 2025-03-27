@@ -1089,18 +1089,19 @@ class BreakingChangesComparer
         $type = $this->getTypeFromReflection($reflectionFrom);
         $ref = $this->getRefFromReflection($reflectionFrom);
 
+        // If the API was already internal, we don't need to do anything.
+        if ($reflectionFrom->isInternal()) {
+            return true;
+        }
+        // If the API was already private (but not config), we don't need to do anything.
+        if ($this->getVisibilityFromReflection($reflectionFrom) === 'private'
+            && (!is_a($reflectionFrom, PropertyReflection::class) || !$this->propertyIsConfig($reflectionFrom))
+        ) {
+            return true;
+        }
+
         // Check if API went missing
         if ($reflectionTo === null || $dataTo['file'] === null) {
-            // If the API was already internal, we don't need to do anything.
-            if ($reflectionFrom->isInternal()) {
-                return true;
-            }
-            // If the API was already private (but not config), we don't need to do anything.
-            if ($this->getVisibilityFromReflection($reflectionFrom) === 'private'
-                && (!is_a($reflectionFrom, PropertyReflection::class) || $this->propertyIsConfig($reflectionFrom))
-            ) {
-                return true;
-            }
             // Mark whether we still need to deprecate it, and note the breaking change.
             // Note params can't be marked deprecated.
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {
@@ -1274,6 +1275,14 @@ class BreakingChangesComparer
                 ...$data,
                 'message' => 'The version number for this deprecation notice is missing or malformed. Should be in the form "1.2.0".',
             ];
+        }
+
+        if (empty($messageAsArray)) {
+            $this->actionsToTake[$module][BreakingChangesComparer::ACTION_FIX_DEPRECATION][$type][$ref] = [
+                ...$data,
+                'message' => 'The deprecation annotation is missing a message.',
+            ];
+            return '';
         }
 
         return implode(' ', $messageAsArray);

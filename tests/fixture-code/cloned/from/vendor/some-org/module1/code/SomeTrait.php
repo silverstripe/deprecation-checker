@@ -10,6 +10,7 @@ namespace SomeOrg\Module1;
  */
 trait SomeTrait
 {
+    /** @deprecated 1.2.3 */
     public bool $someProperty;
 
     protected $wasProtected = 'oooh';

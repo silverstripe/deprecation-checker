@@ -62,66 +62,38 @@ class BreakingChangesComparerTest extends TestCase
         }
     }
 
-    public function testCompare()
+    public function testCompareActions()
     {
         $comparer = new BreakingChangesComparer(new NullOutput());
 
-        // There should be no actions and no breaking changes before we've started comparing
+        // There should be no actions before we've started comparing
         $this->assertEmpty($comparer->getActionsToTake());
+
+        $comparer->compare(BreakingChangesComparerTest::$project);
+        $this->assertEquals($this->getExpectedActions(), $comparer->getActionsToTake(), 'should get expected actions');
+    }
+
+    public function testCompareChanges()
+    {
+        $comparer = new BreakingChangesComparer(new NullOutput());
+
+        // There should be no breaking changes before we've started comparing
         $this->assertEmpty($comparer->getBreakingChanges());
 
         $comparer->compare(BreakingChangesComparerTest::$project);
-
-        // $this->assertEquals($this->getExpectedActions(), $comparer->getActionsToTake(), 'should get expected actions');
         $this->assertEquals($this->getExpectedChanges(), $comparer->getBreakingChanges(), 'should get expected changes');
     }
 
     private function getExpectedActions(): array
     {
-        // @TODO there's more actions we need to test
-        // @TODO remove some of these by adding deprecation notices
-        // @TODO double check they're actually correct
         $removedNotDeprecated = 'This API was removed, but hasn\'t been deprecated.';
         $internalNotDeprecated = 'This API was made @internal, but hasn\'t been deprecated.';
+        $fixVersionNumber = 'The version number for this deprecation notice is missing or malformed. Should be in the form "1.2.0".';
+        $missingMessage = 'The deprecation annotation is missing a message.';
         return [
             'some-org/module1' => [
                 'deprecate' => [
-                    'config' => [
-                        // Note that this system (and our processes) have no way to distinguish between config added to an extension
-                        // that is meant to be used *on the model* vs meant to be used *on the extension*.
-                        // So we probably wouldn't deprecate this, but the system still needs to warn us about it.
-                        'SomeOrg\Module1\Extension\ExtensionClass->has_one' => [
-                            'name' => 'has_one',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Extension/ExtensionClass.php',
-                            'class' => 'SomeOrg\Module1\Extension\ExtensionClass',
-                            'apiType' => 'config',
-                            'message' => $removedNotDeprecated,
-                        ],
-                        // @TODO add a config for one of the DataObjects to be removed
-                        // @TODO plus one in each to be already deprecated and removed
-                    ],
                     'method' => [
-                        'SomeOrg\Module1\InternalClass::someMethod()' => [
-                            'name' => 'someMethod',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/InternalClass.php',
-                            'class' => 'SomeOrg\Module1\InternalClass',
-                            'apiType' => 'method',
-                            'message' => $removedNotDeprecated,
-                        ],
-                        'SomeOrg\Module1\Model\ModelTwo::moveMethodToExtension()' => [
-                            'name' => 'moveMethodToExtension',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelTwo.php',
-                            'class' => 'SomeOrg\Module1\Model\ModelTwo',
-                            'apiType' => 'method',
-                            'message' => $removedNotDeprecated,
-                        ],
-                        'SomeOrg\Module1\Model\ModelTwo::moveMethodToExtensionButNot()' => [
-                            'name' => 'moveMethodToExtensionButNot',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelTwo.php',
-                            'class' => 'SomeOrg\Module1\Model\ModelTwo',
-                            'apiType' => 'method',
-                            'message' => $removedNotDeprecated,
-                        ],
                         'SomeOrg\Module1\SomeTrait::thirdMethod()' => [
                             'name' => 'thirdMethod',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeTrait.php',
@@ -129,38 +101,13 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'method',
                             'message' => $removedNotDeprecated,
                         ],
-                        'SomeOrg\Module1\SomeTrait::fakeMethod()' => [
-                            'name' => 'fakeMethod',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeTrait.php',
-                            'class' => 'SomeOrg\Module1\SomeTrait',
-                            'apiType' => 'method',
-                            'message' => $removedNotDeprecated,
-                        ],
                     ],
                     'class' => [
-                        'SomeOrg\Module1\Model\ModelOne' => [
-                            'name' => 'SomeOrg\Module1\Model\ModelOne',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
-                            'apiType' => 'class',
-                            'message' => $removedNotDeprecated,
-                        ],
                         'SomeOrg\Module1\SomeClass' => [
                             'name' => 'SomeOrg\Module1\SomeClass',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeClass.php',
                             'apiType' => 'class',
                             'message' => $internalNotDeprecated,
-                        ],
-                        'SomeOrg\Module1\SomeClassTwo' => [
-                            'name' => 'SomeOrg\Module1\SomeClassTwo',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeClassTwo.php',
-                            'apiType' => 'class',
-                            'message' => $removedNotDeprecated,
-                        ],
-                        'SomeOrg\Module1\SomeInterfaceTwo' => [
-                            'name' => 'SomeOrg\Module1\SomeInterfaceTwo',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeInterfaceTwo.php',
-                            'apiType' => 'interface',
-                            'message' => $removedNotDeprecated,
                         ],
                         'SomeOrg\Module1\SomeTraitTwo' => [
                             'name' => 'SomeOrg\Module1\SomeTraitTwo',
@@ -177,27 +124,6 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'property',
                             'message' => $removedNotDeprecated,
                         ],
-                        'SomeOrg\Module1\SomeInterface->someConfig' => [
-                            'name' => 'someConfig',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeInterface.php',
-                            'class' => 'SomeOrg\Module1\SomeInterface',
-                            'apiType' => 'property',
-                            'message' => $removedNotDeprecated,
-                        ],
-                        'SomeOrg\Module1\SomeInterface->db' => [
-                            'name' => 'db',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeInterface.php',
-                            'class' => 'SomeOrg\Module1\SomeInterface',
-                            'apiType' => 'property',
-                            'message' => $removedNotDeprecated,
-                        ],
-                        'SomeOrg\Module1\SomeTrait->someProperty' => [
-                            'name' => 'someProperty',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeTrait.php',
-                            'class' => 'SomeOrg\Module1\SomeTrait',
-                            'apiType' => 'property',
-                            'message' => $removedNotDeprecated,
-                        ],
                         'SomeOrg\Module1\SomeTrait->wasProtected' => [
                             'name' => 'wasProtected',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeTrait.php',
@@ -205,11 +131,78 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'property',
                             'message' => $internalNotDeprecated,
                         ],
-                        'SomeOrg\Module1\SomeTrait->fakeProperty' => [
-                            'name' => 'fakeProperty',
+                    ],
+                    'config' => [
+                        'SomeOrg\Module1\Extension\ExtensionClass->has_one' => [
+                            'name' => 'has_one',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Extension/ExtensionClass.php',
+                            'class' => 'SomeOrg\Module1\Extension\ExtensionClass',
+                            'apiType' => 'config',
+                            'message' => $removedNotDeprecated,
+                        ],
+                    ]
+                ],
+                'fix-deprecation' => [
+                    'class' => [
+                        'SomeOrg\Module1\Model\ModelOne' => [
+                            'name' => 'SomeOrg\Module1\Model\ModelOne',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
+                            'apiType' => 'class',
+                            'message' => $fixVersionNumber,
+                        ],
+                        'SomeOrg\Module1\SomeClassTwo' => [
+                            'name' => 'SomeOrg\Module1\SomeClassTwo',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeClassTwo.php',
+                            'apiType' => 'class',
+                            'message' => $fixVersionNumber,
+                        ],
+                    ],
+                    'property' => [
+                        'SomeOrg\Module1\SomeTrait->someProperty' => [
+                            'name' => 'someProperty',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeTrait.php',
                             'class' => 'SomeOrg\Module1\SomeTrait',
                             'apiType' => 'property',
+                            'message' => $missingMessage,
+                        ],
+                    ],
+                    'method' => [
+                        'SomeOrg\Module1\Model\ModelTwo::moveMethodToExtensionButNot()' => [
+                            'name' => 'moveMethodToExtensionButNot',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelTwo.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelTwo',
+                            'apiType' => 'method',
+                            'message' => 'There are multiple deprecation notices for this API.',
+                        ],
+                    ],
+                ],
+            ],
+            'some-org/module2' => [
+                'deprecate' => [
+                    'const' => [
+                        'SomeOrg\Module2\Something\ClassOne::CONST_ONE' => [
+                            'name' => 'CONST_ONE',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/ClassOne.php',
+                            'class' => 'SomeOrg\Module2\Something\ClassOne',
+                            'apiType' => 'constant',
+                            'message' => $removedNotDeprecated,
+                        ],
+                    ],
+                    'property' => [
+                        'SomeOrg\Module2\Something\ClassOne->property3' => [
+                            'name' => 'property3',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/ClassOne.php',
+                            'class' => 'SomeOrg\Module2\Something\ClassOne',
+                            'apiType' => 'property',
+                            'message' => $removedNotDeprecated,
+                        ],
+                    ],
+                    'config' => [
+                        'SomeOrg\Module2\Something\DataObjectOne->config2' => [
+                            'name' => 'config2',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/DataObjectOne.php',
+                            'class' => 'SomeOrg\Module2\Something\DataObjectOne',
+                            'apiType' => 'config',
                             'message' => $removedNotDeprecated,
                         ],
                     ],
@@ -284,16 +277,6 @@ class BreakingChangesComparerTest extends TestCase
                             'fromOrig' => '',
                             'toOrig' => 'void',
                         ],
-                        'SomeOrg\Module1\SomeInterface::internalMethod()' => [
-                            'name' => 'internalMethod',
-                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/SomeInterface.php',
-                            'class' => 'SomeOrg\Module1\SomeInterface',
-                            'apiType' => 'method',
-                            'from' => '',
-                            'to' => 'SomeOrg\Module1\SomeInterface',
-                            'fromOrig' => '',
-                            'toOrig' => 'SomeInterface',
-                        ],
                         'SomeOrg\Module1\SomeTrait::someMethod()' => [
                             'name' => 'someMethod',
                             'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/SomeTrait.php',
@@ -324,13 +307,6 @@ class BreakingChangesComparerTest extends TestCase
                             'class' => 'SomeOrg\Module1\SomeInterface',
                             'apiType' => 'method',
                             'isNow' => false,
-                        ],
-                        'SomeOrg\Module1\SomeInterface::internalMethod()' => [
-                            'name' => 'internalMethod',
-                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/SomeInterface.php',
-                            'class' => 'SomeOrg\Module1\SomeInterface',
-                            'apiType' => 'method',
-                            'isNow' => true,
                         ],
                         'SomeOrg\Module1\SomeTrait::anotherMethod()' => [
                             'name' => 'anotherMethod',
@@ -496,15 +472,6 @@ class BreakingChangesComparerTest extends TestCase
                             'class' => 'SomeOrg\Module1\SomeInterface',
                             'apiType' => 'parameter',
                         ],
-                        'SomeOrg\Module1\SomeInterface::internalMethod(($param)' => [
-                            'name' => 'param',
-                            'hint' => 'int',
-                            'hintOrig' => 'int',
-                            'function' => null,
-                            'method' => 'internalMethod',
-                            'class' => 'SomeOrg\Module1\SomeInterface',
-                            'apiType' => 'parameter',
-                        ],
                         'SomeOrg\Module1\SomeTrait::someMethod(($param2)' => [
                             'name' => 'param2',
                             'hint' => '',
@@ -541,14 +508,6 @@ class BreakingChangesComparerTest extends TestCase
                 ],
                 'removed' => [
                     'method' => [
-                        // @TODO we shouldn't see this, @internal class should be ignored!!
-                        'SomeOrg\Module1\InternalClass::someMethod()' => [
-                            'name' => 'someMethod',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/InternalClass.php',
-                            'class' => 'SomeOrg\Module1\InternalClass',
-                            'apiType' => 'method',
-                            'message' => '',
-                        ],
                         'SomeOrg\Module1\Model\ModelTwo::moveMethodToExtensionButNot()' => [
                             'name' => 'moveMethodToExtensionButNot',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelTwo.php',
@@ -563,32 +522,25 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'method',
                             'message' => '',
                         ],
-                        'SomeOrg\Module1\SomeTrait::fakeMethod()' => [
-                            'name' => 'fakeMethod',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeTrait.php',
-                            'class' => 'SomeOrg\Module1\SomeTrait',
-                            'apiType' => 'method',
-                            'message' => '',
-                        ],
                     ],
                     'class' => [
                         'SomeOrg\Module1\Model\ModelOne' => [
                             'name' => 'SomeOrg\Module1\Model\ModelOne',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
                             'apiType' => 'class',
-                            'message' => '',
+                            'message' => 'This deprecation notice has no version',
                         ],
                         'SomeOrg\Module1\SomeClassTwo' => [
                             'name' => 'SomeOrg\Module1\SomeClassTwo',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeClassTwo.php',
                             'apiType' => 'class',
-                            'message' => '',
+                            'message' => '1.2 Version number format is wrong!!',
                         ],
                         'SomeOrg\Module1\SomeInterfaceTwo' => [
                             'name' => 'SomeOrg\Module1\SomeInterfaceTwo',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeInterfaceTwo.php',
                             'apiType' => 'interface',
-                            'message' => '',
+                            'message' => 'This interface has been deprecated, hurray!',
                         ],
                         'SomeOrg\Module1\SomeTraitTwo' => [
                             'name' => 'SomeOrg\Module1\SomeTraitTwo',
@@ -629,27 +581,6 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'property',
                             'message' => '',
                         ],
-                        'SomeOrg\Module1\SomeTrait->fakeProperty' => [
-                            'name' => 'fakeProperty',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeTrait.php',
-                            'class' => 'SomeOrg\Module1\SomeTrait',
-                            'apiType' => 'property',
-                            'message' => '',
-                        ],
-                        'SomeOrg\Module1\SomeInterface->someConfig' => [
-                            'name' => 'someConfig',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeInterface.php',
-                            'class' => 'SomeOrg\Module1\SomeInterface',
-                            'apiType' => 'property',
-                            'message' => '',
-                        ],
-                        'SomeOrg\Module1\SomeInterface->db' => [
-                            'name' => 'db',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeInterface.php',
-                            'class' => 'SomeOrg\Module1\SomeInterface',
-                            'apiType' => 'property',
-                            'message' => '',
-                        ],
                     ],
                     'param' => [
                         'SomeOrg\Module1\SomeInterface::anotherMethod(($param2)' => [
@@ -660,6 +591,22 @@ class BreakingChangesComparerTest extends TestCase
                             'class' => 'SomeOrg\Module1\SomeInterface',
                             'apiType' => 'parameter',
                             'message' => '',
+                        ],
+                    ],
+                    'config' => [
+                        'SomeOrg\Module1\Extension\ExtensionClass->has_one' => [
+                            'name' => 'has_one',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Extension/ExtensionClass.php',
+                            'class' => 'SomeOrg\Module1\Extension\ExtensionClass',
+                            'apiType' => 'config',
+                            'message' => '',
+                        ],
+                        'SomeOrg\Module1\Extension\ExtensionClassTwo->has_one' => [
+                            'name' => 'has_one',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Extension/ExtensionClassTwo.php',
+                            'class' => 'SomeOrg\Module1\Extension\ExtensionClassTwo',
+                            'apiType' => 'config',
+                            'message' => 'Will be replaced with SomeOrg\Module1\Extension\ExtensionClass.has_one',
                         ],
                     ],
                 ],
@@ -785,12 +732,19 @@ class BreakingChangesComparerTest extends TestCase
                         ],
                     ],
                     'config' => [
+                        'SomeOrg\Module2\Something\DataObjectOne->config2' => [
+                            'name' => 'config2',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/DataObjectOne.php',
+                            'class' => 'SomeOrg\Module2\Something\DataObjectOne',
+                            'apiType' => 'config',
+                            'message' => '',
+                        ],
                         'SomeOrg\Module2\Something\DataObjectOne->config3' => [
                             'name' => 'config3',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/DataObjectOne.php',
                             'class' => 'SomeOrg\Module2\Something\DataObjectOne',
                             'apiType' => 'config',
-                            'message' => '',
+                            'message' => 'Will be removed without a replacement',
                         ],
                     ],
                     'const' => [

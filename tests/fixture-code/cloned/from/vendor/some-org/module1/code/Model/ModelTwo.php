@@ -25,6 +25,9 @@ class ModelTwo extends DataObject
 
     /**
      * Since this is protected in the extension in "to" it isn't counted since it can't be called directly.
+     * @deprecated
+     * @deprecated 1.2.3 I wonder what happens with two of these
+     * @deprecated Nevermind, have three.
      */
     public function moveMethodToExtensionButNot()
     {
