@@ -240,10 +240,7 @@ class GenerateCommand extends BaseCommand
         $factory = new ParserFactory($this->supportedModules, $dataDir);
         $project = $factory->buildProject();
 
-        // @TODO can use callback arg to output current step
         $project->parse(function (string $messageType, mixed $data) {
-            // @TODO Probably use a progress bar when not in verbose mode.
-            //       Also check out Doctum\Console\Command\Command::messageCallback()
             switch ($messageType) {
                 case Message::SWITCH_VERSION:
                     /** @var Version $data */
@@ -256,7 +253,6 @@ class GenerateCommand extends BaseCommand
                      * @var ClassReflection $class
                      */
                     list($step, $steps, $class) = $data;
-                    // @TODO can DEFINITELY use this for a progress bar - we even know how many steps there are.
                     $this->output->writeln("Step {$step}/{$steps} - parsing '{$class->getName()}'", OutputInterface::VERBOSITY_VERBOSE);
                     break;
                 case Message::PARSE_ERROR:
@@ -275,8 +271,6 @@ class GenerateCommand extends BaseCommand
                     break;
                 case Message::PARSE_VERSION_FINISHED:
                     /** @var Transaction $data */
-                    // @TODO Would be a good point to STOP the progress bar maybe
-                    // @TODO can say modified x, removed y, visited z
                     $this->output->writeln('Finished parsing that version.', OutputInterface::VERBOSITY_VERBOSE);
                     break;
             }

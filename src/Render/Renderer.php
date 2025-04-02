@@ -16,6 +16,8 @@ use Twig\Loader\FilesystemLoader;
  */
 class Renderer
 {
+    public const string DIR_CACHE = 'cache/twig';
+
     private array $metaDataFrom;
 
     private array $metaDataTo;
@@ -41,7 +43,7 @@ class Renderer
             'apiChanges' => $this->getFormattedApiChanges($breakingApiChanges),
         ];
         $loader = new FilesystemLoader(Path::join(__DIR__, '../../templates'));
-        $cacheDir = Path::join($baseDir, 'cache/twig');
+        $cacheDir = Path::join($baseDir, Renderer::DIR_CACHE);
         $twig = new Environment($loader, ['cache' => $cacheDir, 'auto_reload' => true, 'autoescape' => false]);
         $content = $twig->render('changelog.md.twig', $data);
         file_put_contents($filePath, $content);

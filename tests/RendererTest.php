@@ -131,11 +131,11 @@ class RendererTest extends TestCase
         - Changed type of `belongs_to` relation `BelongsToOne` in [`ModelOne`](api:SomeOrg\Module1\Model\ModelOne) from '[`Member`](api:SilverStripe\Security\Member).SomeRelation' to [`Member`](api:SilverStripe\Security\Member)
         - Changed type of `belongs_many_many` relation `BelongsManyTwo` in [`ModelOne`](api:SomeOrg\Module1\Model\ModelOne) from [`ModelTwo`](api:SomeOrg\Module1\Model\ModelTwo) to '[`ModelOne`](api:SomeOrg\Module1\Model\ModelOne).SomeRelation'
         - Changed type of property [`ModelOne->someProperty`](api:SomeOrg\Module1\Model\ModelOne->someProperty) from `bool` to `string`
+        - Changed type of parameter `$changeType` in [`ModelOne::fourthMethod()`](api:SomeOrg\Module1\Model\ModelOne::fourthMethod()) from `string` to `int|null`
         - Changed type of parameter `$param2` in [`ModelOne::anotherMethod()`](api:SomeOrg\Module1\Model\ModelOne::anotherMethod()) from `array` to dynamic
-        - Changed type of parameter `$param` in [`ModelOne::thirdMethod()`](api:SomeOrg\Module1\Model\ModelOne::thirdMethod()) from `string` to `string|null`
         - Changed type of parameter `$someArg2` in [`someGlobalFunctionTwo()`](api:someGlobalFunctionTwo()) from `bool` to dynamic
         - Changed type of parameter `$someParam` in [`ModelOne::anotherMethod()`](api:SomeOrg\Module1\Model\ModelOne::anotherMethod()) from dynamic to `array|null`
-        - Changed type of parameter `$string` in [`someGlobalFunctionThree()`](api:someGlobalFunctionThree()) from `string` to `string|null`
+        - Changed type of parameter `$string` in [`someGlobalFunctionFour()`](api:someGlobalFunctionFour()) from `string` to `int|null`
         - Renamed parameter `$returnMe` in [`SomeTrait::someMethod()`](api:SomeOrg\Module1\SomeTrait::someMethod()) to `$return`
         - Renamed parameter `$someParam` in [`ModelOne::anotherMethod()`](api:SomeOrg\Module1\Model\ModelOne::anotherMethod()) to `$param`
         - Renamed parameter `$someParam` in [`SomeInterface::anotherMethod()`](api:SomeOrg\Module1\SomeInterface::anotherMethod()) to `$someOtherParam`

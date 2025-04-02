@@ -23,7 +23,7 @@ class ExtensionConfigReflection extends PropertyReflection implements ExtensionR
     public static function fromArray(Project $project, array $array): static
     {
         // Direct copy/paste from PropertyReflection::fromArray() but swap self for static
-        $property            = new self($array['name'], $array['line']);
+        $property            = new static($array['name'], $array['line']);
         $property->shortDesc = $array['short_desc'];
         $property->longDesc  = $array['long_desc'];
         $property->hint      = $array['hint'];

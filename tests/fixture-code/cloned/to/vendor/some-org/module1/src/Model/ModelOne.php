@@ -79,4 +79,9 @@ abstract class ModelOne extends DataObject
     {
         return [];
     }
+
+    protected static function fourthMethod(?int $changeType = null)
+    {
+        // no-op
+    }
 }

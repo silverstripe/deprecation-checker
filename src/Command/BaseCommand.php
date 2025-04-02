@@ -31,7 +31,7 @@ abstract class BaseCommand extends Command
      * Callable to pass into Process::run() to advance a progress bar when a long process
      * has some output
      */
-    public function handleProcessOutput($type, $data): void
+    public function handleProcessOutput(string $type, ?string $data): void
     {
         $this->advanceProgressBar($data);
     }

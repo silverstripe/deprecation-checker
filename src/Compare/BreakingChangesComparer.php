@@ -1032,12 +1032,28 @@ class BreakingChangesComparer
             return false;
         }
 
+        if ($parameterFrom->getName() === 'thirdMethod') {
+            echo '';
+        }
+
         // `string $something = null` is the same as `?string $something = null`
-        // @TODO don't ignore if the `string` part changes - i.e. `?string` and `?int` are not the same!
-        if (($parameterFrom->getDefault() === 'null' && $this->hintIsNullable($parameterFrom->getHint()))
-            || ($parameterTo->getDefault() === 'null' && $this->hintIsNullable($parameterTo->getHint()))
+        // But don't ignore if the `string` part changes - i.e. `?string` and `?int` are not the same!
+        if (($parameterFrom->getDefault() === 'null' || $this->hintIsNullable($parameterFrom->getHint()))
+            || ($parameterTo->getDefault() === 'null' || $this->hintIsNullable($parameterTo->getHint()))
         ) {
-            return false;
+            $fromNoNull = [];
+            $toNoNull = [];
+            foreach ($parameterFrom->getHint() as $hintReflection) {
+                if ($hintReflection->getName() !== 'null') {
+                    $fromNoNull[] = $hintReflection->getName();
+                }
+            }
+            foreach ($parameterTo->getHint() as $hintReflection) {
+                if ($hintReflection->getName() !== 'null') {
+                    $toNoNull[] = $hintReflection->getName();
+                }
+            }
+            return $fromNoNull !== $toNoNull;
         }
 
         return true;

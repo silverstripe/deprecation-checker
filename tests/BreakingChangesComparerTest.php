@@ -251,7 +251,6 @@ class BreakingChangesComparerTest extends TestCase
      */
     public static function getExpectedChanges(): array
     {
-        // @TODO check what changes when we disable the fix T_T
         return [
             'some-org/module1' => [
                 'returnByRef' => [
@@ -412,18 +411,6 @@ class BreakingChangesComparerTest extends TestCase
                 ],
                 'type' => [
                     'param' => [
-                        'someGlobalFunctionThree($stringRenamed)' => [
-                            'name' => 'string',
-                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/_config.php',
-                            'function' => 'someGlobalFunctionThree',
-                            'method' => null,
-                            'class' => null,
-                            'apiType' => 'parameter',
-                            'from' => 'string',
-                            'to' => 'string|null',
-                            'fromOrig' => 'string',
-                            'toOrig' => 'string|null',
-                        ],
                         'someGlobalFunctionTwo($someArg2)' => [
                             'name' => 'someArg2',
                             'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/_config.php',
@@ -435,6 +422,18 @@ class BreakingChangesComparerTest extends TestCase
                             'to' => '',
                             'fromOrig' => 'bool',
                             'toOrig' => '',
+                        ],
+                        'someGlobalFunctionFour($string)' => [
+                            'name' => 'string',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/_config.php',
+                            'function' => 'someGlobalFunctionFour',
+                            'method' => null,
+                            'class' => null,
+                            'apiType' => 'parameter',
+                            'from' => 'string',
+                            'to' => 'int|null',
+                            'fromOrig' => 'string',
+                            'toOrig' => 'int|null',
                         ],
                         'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param)' => [
                             'name' => 'someParam',
@@ -460,17 +459,17 @@ class BreakingChangesComparerTest extends TestCase
                             'fromOrig' => 'array',
                             'toOrig' => '',
                         ],
-                        'SomeOrg\Module1\Model\ModelOne::thirdMethod(($param)' => [
-                            'name' => 'param',
+                        'SomeOrg\Module1\Model\ModelOne::fourthMethod(($changeType)' => [
+                            'name' => 'changeType',
                             'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
                             'function' => null,
-                            'method' => 'thirdMethod',
+                            'method' => 'fourthMethod',
                             'class' => 'SomeOrg\Module1\Model\ModelOne',
                             'apiType' => 'parameter',
                             'from' => 'string',
-                            'to' => 'string|null',
+                            'to' => 'int|null',
                             'fromOrig' => 'string',
-                            'toOrig' => 'string|null',
+                            'toOrig' => 'int|null',
                         ],
                     ],
                     'property' => [

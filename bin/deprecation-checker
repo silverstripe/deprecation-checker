@@ -2,7 +2,7 @@
 <?php
 
 use Composer\InstalledVersions;
-use Silverstripe\DeprecationChecker\Command;
+use SilverStripe\DeprecationChecker\Command;
 use Symfony\Component\Console\Application;
 
 require_once __DIR__ . '/../vendor/autoload.php';

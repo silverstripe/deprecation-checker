@@ -8,7 +8,7 @@ use ReflectionProperty;
 use Symfony\Component\Finder\Finder;
 
 /**
- * Stolen from api.silverstripe.org - rework this to use supported modules API.
+ * Finds PHP files in supported modules as provided by RecipeVersionCollection
  */
 class RecipeFinder extends Finder
 {

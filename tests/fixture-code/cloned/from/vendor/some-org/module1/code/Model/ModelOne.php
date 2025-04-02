@@ -101,6 +101,11 @@ class ModelOne extends DataObject
         // no-op
     }
 
+    protected static function fourthMethod(string $changeType = null)
+    {
+        // no-op
+    }
+
     /** @internal */
     public function internalMethod()
     {
