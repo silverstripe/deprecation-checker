@@ -365,8 +365,14 @@ class BreakingChangesComparer
     {
         // Compare consts that have the same name in both versions or removed in the new one
         foreach ($constsFrom as $constName => $const) {
+            $constClass = $const->getClass();
             // Skip comparison where the API used to be in a parent class or explicitly in a trait and wasn't overridden
-            if ($const->getClass()?->getName() !== $className) {
+            if ($constClass?->getName() !== $className) {
+                continue;
+            }
+            // Skip comparison where the API used to exist on the parent class
+            // i.e. even if it is explicitly overridden in the subclass, only the superclass needs to report the changes.
+            if ($constClass?->getParent()?->getConstants(true)[$constName] ?? false) {
                 continue;
             }
             $this->checkConstant($constName, $const, $constsTo[$constName] ?? null, $module);
@@ -431,8 +437,14 @@ class BreakingChangesComparer
     {
         // Compare properties that have the same name in both versions or removed in the new one
         foreach ($propertiesFrom as $propertyName => $property) {
+            $propertyClass = $property->getClass();
             // Skip comparison where the API used to be in a parent class or explicitly in a trait and wasn't overridden
-            if ($property->getClass()?->getName() !== $className) {
+            if ($propertyClass?->getName() !== $className) {
+                continue;
+            }
+            // Skip comparison where the API used to exist on the parent class
+            // i.e. even if it is explicitly overridden in the subclass, only the superclass needs to report the changes.
+            if ($propertyClass?->getParent()?->getProperties(true)[$propertyName] ?? false) {
                 continue;
             }
             $this->checkProperty($propertyName, $property, $propertiesTo[$propertyName] ?? null, $module);
@@ -552,9 +564,9 @@ class BreakingChangesComparer
             if ($methodClass?->getName() !== $className) {
                 continue;
             }
-            // Skip comparison where the API used to and still does belong on the parent class
+            // Skip comparison where the API used to exist on the parent class
             // i.e. even if it is explicitly overridden in the subclass, only the superclass needs to report the changes.
-            if ($methodClass?->getParentMethod($methodName) && $classTo->getParentMethod($methodName)) {
+            if ($methodClass?->getParentMethod($methodName)) {
                 continue;
             }
             $this->checkMethod($methodName, $method, $methodsTo[$methodName] ?? null, $module);
