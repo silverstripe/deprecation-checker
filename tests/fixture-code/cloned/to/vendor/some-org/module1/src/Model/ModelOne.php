@@ -64,7 +64,7 @@ abstract class ModelOne extends DataObject
 
     abstract public static function someMethod(): string|int;
 
-    public function anotherMethod(?array &$param, ...$param2 = ['one', 'two']): bool|DataObject
+    public function anotherMethod(?array &$param, ...$param2): bool|DataObject
     {
         $param = 'hello';
         return true;

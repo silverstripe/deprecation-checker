@@ -131,6 +131,13 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'property',
                             'message' => $internalNotDeprecated,
                         ],
+                        'SomeOrg\Module1\Model\ModelOne->wasProtected' => [
+                            'name' => 'wasProtected',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'property',
+                            'message' => $removedNotDeprecated,
+                        ],
                     ],
                     'config' => [
                         'SomeOrg\Module1\Extension\ExtensionClass->has_one' => [
@@ -140,16 +147,17 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'config',
                             'message' => $removedNotDeprecated,
                         ],
+                        'SomeOrg\Module1\Model\ModelOne->someConfig' => [
+                            'name' => 'someConfig',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'config',
+                            'message' => $internalNotDeprecated,
+                        ],
                     ]
                 ],
                 'fix-deprecation' => [
                     'class' => [
-                        'SomeOrg\Module1\Model\ModelOne' => [
-                            'name' => 'SomeOrg\Module1\Model\ModelOne',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
-                            'apiType' => 'class',
-                            'message' => $fixVersionNumber,
-                        ],
                         'SomeOrg\Module1\SomeClassTwo' => [
                             'name' => 'SomeOrg\Module1\SomeClassTwo',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeClassTwo.php',
@@ -223,6 +231,17 @@ class BreakingChangesComparerTest extends TestCase
                         ],
                     ],
                 ],
+                'fix-deprecation' => [
+                    'config' => [
+                        'SomeOrg\Module2\Something\DataObjectOne->config3' => [
+                            'name' => 'config3',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/DataObjectOne.php',
+                            'class' => 'SomeOrg\Module2\Something\DataObjectOne',
+                            'apiType' => 'config',
+                            'message' => $fixVersionNumber,
+                        ],
+                    ],
+                ],
             ],
         ];
     }
@@ -271,6 +290,24 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'parameter',
                             'isNow' => false,
                         ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param)' => [
+                            'name' => 'someParam',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'anotherMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'isNow' => true,
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param2)' => [
+                            'name' => 'param2',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'anotherMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'isNow' => false,
+                        ],
                     ],
                 ],
                 'returnType' => [
@@ -306,6 +343,36 @@ class BreakingChangesComparerTest extends TestCase
                             'fromOrig' => 'array',
                             'toOrig' => 'array|null',
                         ],
+                        'SomeOrg\Module1\Model\ModelOne::someMethod()' => [
+                            'name' => 'someMethod',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'method',
+                            'from' => 'array',
+                            'to' => 'string|int',
+                            'fromOrig' => 'array',
+                            'toOrig' => 'string|int',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod()' => [
+                            'name' => 'anotherMethod',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'method',
+                            'from' => '',
+                            'to' => 'bool|SilverStripe\ORM\DataObject',
+                            'fromOrig' => '',
+                            'toOrig' => 'bool|DataObject',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::thirdMethod()' => [
+                            'name' => 'thirdMethod',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'method',
+                            'from' => '',
+                            'to' => 'array',
+                            'fromOrig' => '',
+                            'toOrig' => 'array',
+                        ],
                         'SomeOrg\Module1\Model\ModelTwo::moveMethodToExtension()' => [
                             'name' => 'moveMethodToExtension',
                             'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelTwo.php',
@@ -331,6 +398,13 @@ class BreakingChangesComparerTest extends TestCase
                             'name' => 'anotherMethod',
                             'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/SomeTrait.php',
                             'class' => 'SomeOrg\Module1\SomeTrait',
+                            'apiType' => 'method',
+                            'isNow' => true,
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::someMethod()' => [
+                            'name' => 'someMethod',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
                             'apiType' => 'method',
                             'isNow' => true,
                         ],
@@ -362,23 +436,78 @@ class BreakingChangesComparerTest extends TestCase
                             'fromOrig' => 'bool',
                             'toOrig' => '',
                         ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param)' => [
+                            'name' => 'someParam',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'anotherMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'from' => '',
+                            'to' => 'array|null',
+                            'fromOrig' => '',
+                            'toOrig' => 'array|null',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param2)' => [
+                            'name' => 'param2',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'anotherMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'from' => 'array',
+                            'to' => '',
+                            'fromOrig' => 'array',
+                            'toOrig' => '',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::thirdMethod(($param)' => [
+                            'name' => 'param',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'thirdMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'from' => 'string',
+                            'to' => 'string|null',
+                            'fromOrig' => 'string',
+                            'toOrig' => 'string|null',
+                        ],
+                    ],
+                    'property' => [
+                        'SomeOrg\Module1\Model\ModelOne->someProperty' => [
+                            'name' => 'someProperty',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'property',
+                            'from' => 'bool',
+                            'to' => 'string',
+                            'fromOrig' => 'bool',
+                            'toOrig' => 'string',
+                        ],
                     ],
                     'db' => [
-                        'SomeOrg\Module1\Extension\ExtensionClass.db-\'FromExtensionDB\'' => [
+                        'SomeOrg\Module1\Extension\ExtensionClass.db-FromExtensionDB' => [
                             'name' => 'FromExtensionDB',
                             'class' => 'SomeOrg\Module1\Extension\ExtensionClass',
                             'apiType' => 'database field',
                             'from' => "'Boolean(true)'",
                             'to' => "'Boolean(false)'",
                         ],
-                        'SomeOrg\Module1\Model\ModelTwo.db-\'FromExtensionDB\'' => [
+                        'SomeOrg\Module1\Model\ModelOne.db-FieldTwo' => [
+                            'name' => 'FieldTwo',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'database field',
+                            'from' => '\'Enum("Red,Blue,Green","Blue")\'',
+                            'to' => '\'Enum("Red,Blue,Green","Red")\'',
+                        ],
+                        'SomeOrg\Module1\Model\ModelTwo.db-FromExtensionDB' => [
                             'name' => 'FromExtensionDB',
                             'class' => 'SomeOrg\Module1\Model\ModelTwo',
                             'apiType' => 'database field',
                             'from' => "'Boolean(true)'",
                             'to' => "'Boolean(false)'",
                         ],
-                        'SomeOrg\Module1\Model\ModelTwo.db-\'MoveToExtension\'' => [
+                        'SomeOrg\Module1\Model\ModelTwo.db-MoveToExtension' => [
                             'name' => 'MoveToExtension',
                             'class' => 'SomeOrg\Module1\Model\ModelTwo',
                             'apiType' => 'database field',
@@ -386,20 +515,70 @@ class BreakingChangesComparerTest extends TestCase
                             'to' => "'Varchar'",
                         ],
                     ],
+                    'fixed_fields' => [
+                        'SomeOrg\Module1\Model\ModelOne.fixed_fields-SomeField' => [
+                            'name' => 'SomeField',
+                            'apiType' => 'fixed database field',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'from' => '\'SomeSpec\'',
+                            'to' => '\'SomeChangedSpec\'',
+                        ],
+                    ],
+                    'has_one' => [
+                        'SomeOrg\Module1\Model\ModelOne.has_one-ThirdRelation' => [
+                            'name' => 'ThirdRelation',
+                            'apiType' => '`has_one` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'from' => 'SilverStripe\ORM\DataObject',
+                            'to' => 'SilverStripe\Security\Member',
+                        ],
+                    ],
                     'has_many' => [
-                        'SomeOrg\Module1\Extension\ExtensionClassTwo.has_many-\'FromExtensionHasMany\'' => [
+                        'SomeOrg\Module1\Extension\ExtensionClassTwo.has_many-FromExtensionHasMany' => [
                             'name' => 'FromExtensionHasMany',
                             'class' => 'SomeOrg\Module1\Extension\ExtensionClassTwo',
                             'apiType' => '`has_many` relation',
                             'from' => 'SomeOrg\Module1\Model\ModelOne',
                             'to' => 'SomeOrg\Module1\Model\ModelTwo',
                         ],
-                        'SomeOrg\Module1\Model\ModelTwo.has_many-\'FromExtensionHasMany\'' => [
+                        'SomeOrg\Module1\Model\ModelOne.has_many-HasManyTwo' => [
+                            'name' => 'HasManyTwo',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => '`has_many` relation',
+                            'from' => '\'SomeOrg\Module1\Model\ModelTwo.SomeRelation\'',
+                            'to' => '\'SomeOrg\Module1\Model\ModelTwo.SomeOtherRelation\'',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne.has_many-HasManyThree' => [
+                            'name' => 'HasManyThree',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => '`has_many` relation',
+                            'from' => '\'SomeOrg\Module1\Model\ModelOne.FirstRelation\'',
+                            'to' => 'SilverStripe\ORM\DataObject',
+                        ],
+                        'SomeOrg\Module1\Model\ModelTwo.has_many-FromExtensionHasMany' => [
                             'name' => 'FromExtensionHasMany',
                             'class' => 'SomeOrg\Module1\Model\ModelTwo',
                             'apiType' => '`has_many` relation',
                             'from' => 'SomeOrg\Module1\Model\ModelOne',
                             'to' => 'SomeOrg\Module1\Model\ModelTwo',
+                        ],
+                    ],
+                    'belongs_to' => [
+                        'SomeOrg\Module1\Model\ModelOne.belongs_to-BelongsToOne' => [
+                            'name' => 'BelongsToOne',
+                            'apiType' => '`belongs_to` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'from' => '\'SilverStripe\Security\Member.SomeRelation\'',
+                            'to' => 'SilverStripe\Security\Member',
+                        ],
+                    ],
+                    'belongs_many_many' => [
+                        'SomeOrg\Module1\Model\ModelOne.belongs_many_many-BelongsManyTwo' => [
+                            'name' => 'BelongsManyTwo',
+                            'apiType' => '`belongs_many_many` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'from' => 'SomeOrg\Module1\Model\ModelTwo',
+                            'to' => '\'SomeOrg\Module1\Model\ModelOne.SomeRelation\'',
                         ],
                     ],
                 ],
@@ -435,6 +614,16 @@ class BreakingChangesComparerTest extends TestCase
                             'from' => 'returnMe',
                             'to' => 'return',
                         ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param)' => [
+                            'name' => 'someParam',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'anotherMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'from' => 'someParam',
+                            'to' => 'param',
+                        ],
                     ],
                 ],
                 'default' => [
@@ -468,6 +657,26 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'parameter',
                             'from' => '[]',
                             'to' => 'null',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param2)' => [
+                            'name' => 'param2',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'anotherMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'from' => '[]',
+                            'to' => null,
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::thirdMethod(($param)' => [
+                            'name' => 'param',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'thirdMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'from' => 'null',
+                            'to' => null,
                         ],
                     ],
                 ],
@@ -513,6 +722,15 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'parameter',
                             'isNow' => true,
                         ],
+                        'SomeOrg\Module1\Model\ModelOne::anotherMethod(($param2)' => [
+                            'name' => 'param2',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'anotherMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'parameter',
+                            'isNow' => true,
+                        ],
                     ],
                 ],
                 'default-array' => [
@@ -543,12 +761,6 @@ class BreakingChangesComparerTest extends TestCase
                         ],
                     ],
                     'class' => [
-                        'SomeOrg\Module1\Model\ModelOne' => [
-                            'name' => 'SomeOrg\Module1\Model\ModelOne',
-                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
-                            'apiType' => 'class',
-                            'message' => 'This deprecation notice has no version',
-                        ],
                         'SomeOrg\Module1\SomeClassTwo' => [
                             'name' => 'SomeOrg\Module1\SomeClassTwo',
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/SomeClassTwo.php',
@@ -569,17 +781,22 @@ class BreakingChangesComparerTest extends TestCase
                         ],
                     ],
                     'has_one' => [
-                        'SomeOrg\Module1\Extension\ExtensionClass.has_one-\'FromExtensionHasOne\'' => [
+                        'SomeOrg\Module1\Extension\ExtensionClass.has_one-FromExtensionHasOne' => [
                             'name' => 'FromExtensionHasOne',
                             'apiType' => '`has_one` relation',
                             'class' => 'SomeOrg\Module1\Extension\ExtensionClass',
                         ],
-                        'SomeOrg\Module1\Extension\ExtensionClassTwo.has_one-\'FromExtensionHasOne\'' => [
+                        'SomeOrg\Module1\Extension\ExtensionClassTwo.has_one-FromExtensionHasOne' => [
                             'name' => 'FromExtensionHasOne',
                             'apiType' => '`has_one` relation',
                             'class' => 'SomeOrg\Module1\Extension\ExtensionClassTwo',
                         ],
-                        'SomeOrg\Module1\Model\ModelTwo.has_one-\'FromExtensionHasOne\'' => [
+                        'SomeOrg\Module1\Model\ModelOne.has_one-FirstRelation' => [
+                            'name' => 'FirstRelation',
+                            'apiType' => '`has_one` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                        ],
+                        'SomeOrg\Module1\Model\ModelTwo.has_one-FromExtensionHasOne' => [
                             'name' => 'FromExtensionHasOne',
                             'apiType' => '`has_one` relation',
                             'class' => 'SomeOrg\Module1\Model\ModelTwo',
@@ -600,6 +817,13 @@ class BreakingChangesComparerTest extends TestCase
                             'apiType' => 'property',
                             'message' => '',
                         ],
+                        'SomeOrg\Module1\Model\ModelOne->wasProtected' => [
+                            'name' => 'wasProtected',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'property',
+                            'message' => '',
+                        ],
                     ],
                     'param' => [
                         'SomeOrg\Module1\SomeInterface::anotherMethod(($param2)' => [
@@ -608,6 +832,15 @@ class BreakingChangesComparerTest extends TestCase
                             'function' => null,
                             'method' => 'anotherMethod',
                             'class' => 'SomeOrg\Module1\SomeInterface',
+                            'apiType' => 'parameter',
+                            'message' => '',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::someMethod(($returnMe)' => [
+                            'name' => 'returnMe',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
+                            'function' => null,
+                            'method' => 'someMethod',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
                             'apiType' => 'parameter',
                             'message' => '',
                         ],
@@ -626,6 +859,48 @@ class BreakingChangesComparerTest extends TestCase
                             'class' => 'SomeOrg\Module1\Extension\ExtensionClassTwo',
                             'apiType' => 'config',
                             'message' => 'Will be replaced with SomeOrg\Module1\Extension\ExtensionClass.has_one',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne->someConfig' => [
+                            'name' => 'someConfig',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'config',
+                            'message' => '',
+                        ],
+                    ],
+                    'db' => [
+                        'SomeOrg\Module1\Model\ModelOne.db-FieldOne' => [
+                            'name' => 'FieldOne',
+                            'apiType' => 'database field',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                        ],
+                    ],
+                    'belongs_to' => [
+                        'SomeOrg\Module1\Model\ModelOne.belongs_to-BelongsToTwo' => [
+                            'name' => 'BelongsToTwo',
+                            'apiType' => '`belongs_to` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                        ],
+                    ],
+                    'belongs_many_many' => [
+                        'SomeOrg\Module1\Model\ModelOne.belongs_many_many-BelongsManyOne' => [
+                            'name' => 'BelongsManyOne',
+                            'apiType' => '`belongs_many_many` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                        ],
+                    ],
+                    'has_many' => [
+                        'SomeOrg\Module1\Model\ModelOne.has_many-HasManyOne' => [
+                            'name' => 'HasManyOne',
+                            'apiType' => '`has_many` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                        ],
+                    ],
+                    'many_many' => [
+                        'SomeOrg\Module1\Model\ModelOne.many_many-ManyManyFour' => [
+                            'name' => 'ManyManyFour',
+                            'apiType' => '`many_many` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
                         ],
                     ],
                 ],
@@ -661,12 +936,72 @@ class BreakingChangesComparerTest extends TestCase
                     ],
                 ],
                 'abstract' => [
+                    'class' => [
+                        'SomeOrg\Module1\Model\ModelOne' => [
+                            'name' => 'SomeOrg\Module1\Model\ModelOne',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'apiType' => 'class',
+                        ],
+                    ],
                     'method' => [
                         'SomeOrg\Module1\SomeTrait::anotherMethod()' => [
                             'name' => 'anotherMethod',
                             'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/SomeTrait.php',
                             'class' => 'SomeOrg\Module1\SomeTrait',
                             'apiType' => 'method',
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne::someMethod()' => [
+                            'name' => 'someMethod',
+                            'file' => __DIR__ . '/fixture-code/cloned/to/vendor/some-org/module1/src/Model/ModelOne.php',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'apiType' => 'method',
+                        ],
+                    ],
+                ],
+                'multirelational' => [
+                    'has_one' => [
+                        'SomeOrg\Module1\Model\ModelOne.has_one-SecondRelation' => [
+                            'name' => 'SecondRelation',
+                            'apiType' => '`has_one` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'isNow' => true,
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne.has_one-ThirdRelation' => [
+                            'name' => 'ThirdRelation',
+                            'apiType' => '`has_one` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'isNow' => false,
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne.has_one-FourthRelation' => [
+                            'name' => 'FourthRelation',
+                            'apiType' => '`has_one` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'isNow' => false,
+                        ],
+                    ],
+                ],
+                'through' => [
+                    'many_many' => [
+                        'SomeOrg\Module1\Model\ModelOne.many_many-ManyManyOne' => [
+                            'name' => 'ManyManyOne',
+                            'apiType' => '`many_many` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'isNow' => true,
+                        ],
+                        'SomeOrg\Module1\Model\ModelOne.many_many-ManyManyTwo' => [
+                            'name' => 'ManyManyTwo',
+                            'apiType' => '`many_many` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
+                            'isNow' => false,
+                        ],
+                    ],
+                ],
+                'through-data' => [
+                    'many_many' => [
+                        'SomeOrg\Module1\Model\ModelOne.many_many-ManyManyThree' => [
+                            'name' => 'ManyManyThree',
+                            'apiType' => '`many_many` relation',
+                            'class' => 'SomeOrg\Module1\Model\ModelOne',
                         ],
                     ],
                 ],
@@ -779,7 +1114,7 @@ class BreakingChangesComparerTest extends TestCase
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/DataObjectOne.php',
                             'class' => 'SomeOrg\Module2\Something\DataObjectOne',
                             'apiType' => 'config',
-                            'message' => 'Will be removed without a replacement',
+                            'message' => 'This deprecation notice has no version',
                         ],
                     ],
                     'const' => [
