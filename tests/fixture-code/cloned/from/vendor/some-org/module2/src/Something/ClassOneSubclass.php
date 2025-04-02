@@ -4,7 +4,7 @@ namespace SomeOrg\Module2\Something;
 
 use SilverStripe\Security\Member;
 
-class ClassOne
+class ClassOneSubclass extends ClassOne
 {
     public const CONST_ONE = 'one';
 

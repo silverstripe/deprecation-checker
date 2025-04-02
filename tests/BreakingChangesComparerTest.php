@@ -81,7 +81,7 @@ class BreakingChangesComparerTest extends TestCase
         $this->assertEmpty($comparer->getBreakingChanges());
 
         $comparer->compare(BreakingChangesComparerTest::$project);
-        $this->assertEquals($this->getExpectedChanges(), $comparer->getBreakingChanges(), 'should get expected changes');
+        $this->assertEquals(static::getExpectedChanges(), $comparer->getBreakingChanges(), 'should get expected changes');
     }
 
     private function getExpectedActions(): array
@@ -179,6 +179,22 @@ class BreakingChangesComparerTest extends TestCase
             ],
             'some-org/module2' => [
                 'deprecate' => [
+                    'method' => [
+                        'SomeOrg\Module2\Something\ClassOne::__construct()' => [
+                            'name' => '__construct',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/ClassOne.php',
+                            'class' => 'SomeOrg\Module2\Something\ClassOne',
+                            'apiType' => 'method',
+                            'message' => $removedNotDeprecated,
+                        ],
+                        'SomeOrg\Module2\Something\ClassOne::__destruct()' => [
+                            'name' => '__destruct',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/ClassOne.php',
+                            'class' => 'SomeOrg\Module2\Something\ClassOne',
+                            'apiType' => 'method',
+                            'message' => $removedNotDeprecated,
+                        ],
+                    ],
                     'const' => [
                         'SomeOrg\Module2\Something\ClassOne::CONST_ONE' => [
                             'name' => 'CONST_ONE',
@@ -211,7 +227,10 @@ class BreakingChangesComparerTest extends TestCase
         ];
     }
 
-    private function getExpectedChanges(): array
+    /**
+     * Note this is public and static so it can be reused by RendererTest
+     */
+    public static function getExpectedChanges(): array
     {
         // @TODO check what changes when we disable the fix T_T
         return [
@@ -722,6 +741,22 @@ class BreakingChangesComparerTest extends TestCase
                     ]
                 ],
                 'removed' => [
+                    'method' => [
+                        'SomeOrg\Module2\Something\ClassOne::__construct()' => [
+                            'name' => '__construct',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/ClassOne.php',
+                            'class' => 'SomeOrg\Module2\Something\ClassOne',
+                            'apiType' => 'method',
+                            'message' => '',
+                        ],
+                        'SomeOrg\Module2\Something\ClassOne::__destruct()' => [
+                            'name' => '__destruct',
+                            'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module2/src/Something/ClassOne.php',
+                            'class' => 'SomeOrg\Module2\Something\ClassOne',
+                            'apiType' => 'method',
+                            'message' => '',
+                        ],
+                    ],
                     'property' => [
                         'SomeOrg\Module2\Something\ClassOne->property3' => [
                             'name' => 'property3',
