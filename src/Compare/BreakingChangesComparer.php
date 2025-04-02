@@ -660,7 +660,7 @@ class BreakingChangesComparer
         // Check $fixed_fields
         $fixedFrom = $this->getArrayConfigValue($classFrom, 'fixed_fields', $module);
         $fixedTo = $this->getArrayConfigValue($classTo, 'fixed_fields', $module);
-        $this->checkDbAndSimpleRelation($fqcn, $fixedFrom, $fixedTo, 'fixed_field', 'fixed database field', $baseRef, $module);
+        $this->checkDbAndSimpleRelation($fqcn, $fixedFrom, $fixedTo, 'fixed_fields', 'fixed database field', $baseRef, $module);
 
         // Check $has_one
         $hasOneFrom = $this->getArrayConfigValue($classFrom, 'has_one', $module);
@@ -1434,7 +1434,7 @@ class BreakingChangesComparer
         if ($node instanceof Array_) {
             $items = [];
             foreach ($node->items as $item) {
-                $key = $this->getDefaultValue($item->key, $class);
+                $key = trim($this->getDefaultValue($item->key, $class), "'");
                 $value = $this->getDefaultValue($item->value, $class);
                 $items[$key] = $value;
             }

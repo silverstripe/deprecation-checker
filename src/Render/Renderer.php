@@ -180,7 +180,7 @@ class Renderer
      * Given a message, convert all FQCN references into API links in the format used by docs.silverstripe.org.
      * For FQCN that aren't in the "to" version, surround with backticks if $backTickAsFallback is true.
      */
-    private function replaceClassWithApiLink(string $message, bool $backTickAsFallback = true): string
+    private function replaceClassWithApiLink(string $message, bool $backTickAsFallback = true, bool $classLinkOnly = false): string
     {
         // Regex uses example from https://www.php.net/manual/en/language.oop5.basic.php#language.oop5.basic.class
         // Captures any FQCN-looking string, plus optional const/method/property/config tacked on the end.
@@ -188,7 +188,7 @@ class Renderer
         $apiRegex = '/(?<class>[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\\\\[^\s`:."\'&|-]+)(?<rest>(?:\.|::|->)[a-zA-Z0-9_-]+(?:\(\))?)?/';
         return preg_replace_callback(
             $apiRegex,
-            function(array $match) use ($backTickAsFallback) {
+            function(array $match) use ($backTickAsFallback, $classLinkOnly) {
                 $class = $match['class'];
                 $classReflection = $this->parsedProject->getClass($class);
                 // If that class doesn't exist (e.g. symfony class or removed in new version) just backtick the full reference.
@@ -197,6 +197,11 @@ class Renderer
                 }
                 // Get the API reference
                 $rest = $match['rest'] ?? null;
+
+                if ($classLinkOnly) {
+                    return $this->getApiReference('class', ['name' => $class]) . $rest;
+                }
+
                 if ($rest) {
                     if (preg_match('/^::(.*)\(\)$/', $rest, $restMatch)) {
                         return $this->getApiReference('method', ['name' => $restMatch[1], 'class' => $class]);
@@ -311,12 +316,16 @@ class Renderer
                 default => '',
             };
         }
-        $valueWithLinks = $this->replaceClassWithApiLink($value, false);
 
-        // If any class wasn't resolved into an API link, assume $value is malformed and fall back to $origValue.
+        // Relations with dot syntax should NOT be treated as configuration properties.
+        $classLinksOnly = in_array($apiType, BreakingChangesComparer::DB_AND_RELATION) && $changeType === 'type';
+        // Get appropriate API links
+        $valueWithLinks = $this->replaceClassWithApiLink($value, false, $classLinksOnly);
+
+        // If any class wasn't resolved into an API link and has a `|` or `&` in the type, assume $value is malformed and fall back to $origValue.
         // See https://github.com/code-lts/doctum/issues/76 for why this is necessary.
         $apiLinkRegex = '/\[`.+`\]\(api:.+\)/';
-        if (!preg_match($apiLinkRegex, $valueWithLinks) && str_contains($valueWithLinks, '\\')) {
+        if (!preg_match($apiLinkRegex, $valueWithLinks) && str_contains($valueWithLinks, '\\') && (str_contains($valueWithLinks, '|') || str_contains($valueWithLinks, '&'))) {
             $valueWithLinks = $origValue;
         }
 
