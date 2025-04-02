@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Parse;
+namespace SilverStripe\DeprecationChecker\Parse;
 
 use Doctum\Parser\ParseError;
 use Iterator;

@@ -1,11 +1,11 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Parse;
+namespace SilverStripe\DeprecationChecker\Parse;
 
 use Doctum\Version\Version;
 use Doctum\Version\VersionCollection;
-use SilverStripe\DeprecationChangelogGenerator\Command\CloneCommand;
-use SilverStripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
+use SilverStripe\DeprecationChecker\Command\CloneCommand;
+use SilverStripe\DeprecationChecker\Compare\BreakingChangesComparer;
 use Symfony\Component\Filesystem\Path;
 
 /**

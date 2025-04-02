@@ -1,12 +1,12 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Render;
+namespace SilverStripe\DeprecationChecker\Render;
 
 use Doctum\Project;
 use Doctum\Version\Version;
 use InvalidArgumentException;
 use LogicException;
-use SilverStripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
+use SilverStripe\DeprecationChecker\Compare\BreakingChangesComparer;
 use Symfony\Component\Filesystem\Path;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;

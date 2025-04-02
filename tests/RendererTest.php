@@ -1,11 +1,11 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Tests;
+namespace SilverStripe\DeprecationChecker\Tests;
 
 use Doctum\Project;
 use PHPUnit\Framework\TestCase;
-use SilverStripe\DeprecationChangelogGenerator\Parse\ParserFactory;
-use SilverStripe\DeprecationChangelogGenerator\Render\Renderer;
+use SilverStripe\DeprecationChecker\Parse\ParserFactory;
+use SilverStripe\DeprecationChecker\Render\Renderer;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 

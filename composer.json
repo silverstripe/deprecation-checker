@@ -1,9 +1,9 @@
 {
-    "name": "silverstripe/deprecation-changelog-generator",
+    "name": "silverstripe/deprecation-checker",
     "autoload": {
         "psr-4": {
-            "SilverStripe\\DeprecationChangelogGenerator\\": "src/",
-            "SilverStripe\\DeprecationChangelogGenerator\\Tests\\": "tests/"
+            "SilverStripe\\DeprecationChecker\\": "src/",
+            "SilverStripe\\DeprecationChecker\\Tests\\": "tests/"
         }
     },
     "require": {

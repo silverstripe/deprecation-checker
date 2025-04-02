@@ -14,26 +14,28 @@ It also lets you know if you need to perform follow-up actions (e.g. if some rem
 
 ## Usage
 
-If you're unsure of usage at any time, use the `--help` flag to get more details about any command, or run the `bin/deprecation-changelog-generator list` command to see all available commands.
+If you're unsure of usage at any time, use the `--help` flag to get more details about any command, or run the `bin/deprecation-checker list` command to see all available commands.
 
-1. Run `bin/deprecation-changelog-generator clone <recipe> <fromConstraint> <toConstraint>`
-    - If you were not already in the directory you want it to dump data into, include `--dir=<path/to/that/directory>`
-    - The directory can either be absolute, or relative to your current directory.
-    - For example `bin/deprecation-changelog-generator clone sink 5.4.x-dev 6.0.x-dev --dir=~/dump/changelog`
-1. Run `bin/deprecation-changelog-generator generate`
-    - If you were not already in the directory from the previous step, include `--dir=<path/to/that/directory>`
-    - The directory can either be absolute, or relative to your current directory.
-    - For example `bin/deprecation-changelog-generator generate --dir=~/dump/changelog`
+> [!NOTE]
+> All of the commands accept a `--dir` option. This determines the directory that will be used for all output and must be the same directory across all commands.
+> If this flag is ommitted, the current working directory will be used.
+
+1. Run `bin/deprecation-checker clone <recipe> <fromConstraint> <toConstraint>`
+    - For example `bin/deprecation-checker clone sink 5.4.x-dev 6.0.x-dev --dir=~/dump/deprecation-checks`
+1. Run `bin/deprecation-checker generate`
+    - For example `bin/deprecation-checker generate --dir=~/dump/deprecation-checks`
+1. Run `bin/deprecation-checker print-actions`
+    - For example `bin/deprecation-checker print-actions --dir=~/dump/deprecation-checks`
 
 This tool uses the `composer` binary on your machine directly, so you shouldn't have any trouble with hitting API rate limits, etc.
 
 ## Limitations
 
+- Due to https://github.com/code-lts/doctum/issues/76 types may not evaluate completely to FQCN
 - The parsing library used doesn't currently pick up on [enums](https://www.php.net/manual/en/language.types.enumerations.php)
 - The parsing library used doesn't currently pick up on globally-scoped consts
 - The parsing library used doesn't currently handle types on constants
 - The parsing library used detects readonly PHPDocs but not the `readonly` keyword for classes and properties
 - This tool doesn't check YAML files for changes to default values or file/fragment names even through these are in our [definition of public API](https://docs.silverstripe.org/en/project_governance/public_api/)
 - This tool doesn't check calls to `$this->extend()` even through this is in our [definition of public API](https://docs.silverstripe.org/en/project_governance/public_api/)
-- Due to https://github.com/code-lts/doctum/issues/76 types may not evaluate completely to FQCN
 - It's not feasible to get config from `get_extra_config()` for comparing.

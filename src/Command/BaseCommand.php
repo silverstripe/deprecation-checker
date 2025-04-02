@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Command;
+namespace SilverStripe\DeprecationChecker\Command;
 
 use RuntimeException;
 use stdClass;

@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Command;
+namespace SilverStripe\DeprecationChecker\Command;
 
 use Composer\Semver\Comparator;
 use Composer\Semver\Semver;
@@ -8,7 +8,7 @@ use Packagist\Api\Client as PackagistClient;
 use Packagist\Api\PackageNotFoundException;
 use Packagist\Api\Result\Package;
 use RuntimeException;
-use SilverStripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
+use SilverStripe\DeprecationChecker\Compare\BreakingChangesComparer;
 use SilverStripe\SupportedModules\MetaData;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Exception\InvalidOptionException;

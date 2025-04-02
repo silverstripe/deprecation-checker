@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Command;
+namespace SilverStripe\DeprecationChecker\Command;
 
 use InvalidArgumentException;
 use Symfony\Component\Console\Attribute\AsCommand;

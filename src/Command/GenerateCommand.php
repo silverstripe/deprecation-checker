@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Command;
+namespace SilverStripe\DeprecationChecker\Command;
 
 use Composer\Semver\VersionParser;
 use Doctum\Message;
@@ -10,9 +10,9 @@ use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
 use Doctum\Version\Version;
 use RuntimeException;
-use SilverStripe\DeprecationChangelogGenerator\Compare\BreakingChangesComparer;
-use SilverStripe\DeprecationChangelogGenerator\Parse\ParserFactory;
-use SilverStripe\DeprecationChangelogGenerator\Render\Renderer;
+use SilverStripe\DeprecationChecker\Compare\BreakingChangesComparer;
+use SilverStripe\DeprecationChecker\Parse\ParserFactory;
+use SilverStripe\DeprecationChecker\Render\Renderer;
 use SilverStripe\SupportedModules\BranchLogic;
 use SilverStripe\SupportedModules\MetaData;
 use Symfony\Component\Console\Attribute\AsCommand;

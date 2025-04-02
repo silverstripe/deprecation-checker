@@ -1,6 +1,6 @@
 <?php
 
-namespace SilverStripe\DeprecationChangelogGenerator\Compare;
+namespace SilverStripe\DeprecationChecker\Compare;
 
 use Doctum\Project;
 use Doctum\Reflection\ClassReflection;
@@ -25,7 +25,7 @@ use PhpParser\Node\Scalar\DNumber;
 use PhpParser\Node\Scalar\LNumber;
 use PhpParser\Node\Scalar\MagicConst\Class_;
 use PhpParser\Node\Scalar\String_;
-use SilverStripe\DeprecationChangelogGenerator\Command\CloneCommand;
+use SilverStripe\DeprecationChecker\Command\CloneCommand;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
