@@ -20,8 +20,7 @@ If you're unsure of usage at any time, use the `--help` flag to get more details
 > All of the commands accept a `--dir` option. This determines the directory that will be used for all output and must be the same directory across all commands.
 > If this flag is omitted, the current working directory will be used.
 
-1. Run `bin/deprecation-checker clone <recipe> <fromConstraint> <toConstraint>`
-    Note that there are several shortcuts for recipe names. Run `bin/deprecation-checker clone --help` for details.
+1. Run `bin/deprecation-checker clone <fromConstraint> <toConstraint>`
     - For example `bin/deprecation-checker clone sink 5.4.x-dev 6.0.x-dev --dir=~/dump/deprecation-checks`
 1. Run `bin/deprecation-checker generate`
     - For example `bin/deprecation-checker generate --dir=~/dump/deprecation-checks`

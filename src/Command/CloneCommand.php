@@ -9,7 +9,6 @@ use Packagist\Api\PackageNotFoundException;
 use Packagist\Api\Result\Package;
 use RuntimeException;
 use SilverStripe\DeprecationChecker\Compare\BreakingChangesComparer;
-use SilverStripe\SupportedModules\MetaData;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Exception\InvalidOptionException;
 use Symfony\Component\Console\Input\InputArgument;
@@ -22,6 +21,8 @@ use Symfony\Component\Filesystem\Path;
 #[AsCommand('clone', 'Clone the data needed to generate the changelog chunk. Uses the host\'s <info>composer</info> binary.')]
 class CloneCommand extends BaseCommand
 {
+    private const string RECIPE = 'silverstripe/recipe-kitchen-sink';
+
     /**
      * The name of the directory which will hold the cloned versions of the recipe
      */
@@ -32,24 +33,13 @@ class CloneCommand extends BaseCommand
      */
     public const string META_FILE = 'changelog-gen-metadata.json';
 
-    private const array RECIPE_SHORTCUTS = [
-        'installer' => 'silverstripe/installer',
-        'sink' => 'silverstripe/recipe-kitchen-sink',
-        'core' => 'silverstripe/recipe-core',
-        'cms' => 'silverstripe/recipe-cms',
-    ];
-
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->setIO($input, $output);
 
         // Make sure the constraints and recipe are valid and exist
-        $recipe = $this->input->getArgument('recipe');
-        if (isset(CloneCommand::RECIPE_SHORTCUTS[$recipe])) {
-            $recipe = CloneCommand::RECIPE_SHORTCUTS[$recipe];
-        }
+        $recipe = CloneCommand::RECIPE;
         $recipeDetails = $this->getRecipeDetails($recipe);
-        $this->validateRecipe($recipeDetails);
         $this->validateConstraints($recipeDetails);
 
         // Get the output dir and convert it an absolute path
@@ -73,13 +63,6 @@ class CloneCommand extends BaseCommand
     protected function configure(): void
     {
         $this->addArgument(
-            'recipe',
-            InputArgument::REQUIRED,
-            'The recipe to clone. Can be any commercially supported Silverstripe CMS recipe in packagist.',
-            null,
-            array_keys(CloneCommand::RECIPE_SHORTCUTS)
-        );
-        $this->addArgument(
             'fromConstraint',
             InputArgument::REQUIRED,
             'A packagist constraint for checking out the recipe when checking the "before" state.'
@@ -96,15 +79,6 @@ class CloneCommand extends BaseCommand
             InputOption::VALUE_REQUIRED,
             'Directory to output the cloned content into.',
             './'
-        );
-
-        $shortcuts = [];
-        foreach (CloneCommand::RECIPE_SHORTCUTS as $shortcut => $recipe) {
-            $shortcuts[] = "- <fg=blue>$shortcut</> ($recipe)";
-        }
-        $this->setHelp(
-            'The following shortcuts can be used for the <info>recipe</info> argument:'
-            . PHP_EOL . implode(PHP_EOL, $shortcuts)
         );
     }
 
@@ -196,23 +170,6 @@ class CloneCommand extends BaseCommand
         }
 
         return $recipeDetails;
-    }
-
-    /**
-     * Validate the recipe is a commercially supported Silverstripe CMS recipe.
-     */
-    private function validateRecipe(Package $recipeDetails): void
-    {
-        if ($recipeDetails->getType() !== 'silverstripe-recipe') {
-            throw new InvalidOptionException(
-                "The recipe '{$recipeDetails->getName()}' is not a Silverstripe CMS recipe"
-            );
-        }
-        if (empty(MetaData::getMetaDataByPackagistName($recipeDetails->getName()))) {
-            throw new InvalidOptionException(
-                "The recipe '{$recipeDetails->getName()}' is not commercially supported"
-            );
-        }
     }
 
     /**
