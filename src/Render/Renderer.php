@@ -171,6 +171,7 @@ class Renderer
         if (($changeType === 'removed' || $changeType === 'internal') && $deprecationMessage) {
             // Tidy it up first and replace FQCN with API links
             $deprecationMessage = lcfirst(trim(preg_replace('/^(will be)/i', '', $deprecationMessage)));
+            $deprecationMessage = preg_replace('/ in a future major release\.?$/i', '', $deprecationMessage);
             $deprecationMessage = $this->replaceClassWithApiLink($deprecationMessage);
             $message .= " - $deprecationMessage";
         }
