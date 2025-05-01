@@ -9,7 +9,7 @@ use SomeOrg\Module1\Model\ModelOne;
 class ExtensionClassTwo extends Extension
 {
     /**
-     * @deprecated 1.2.3 Will be replaced with SomeOrg\Module1\Extension\ExtensionClass.has_one
+     * @deprecated 1.2.3 Will be replaced with SomeOrg\Module1\Extension\ExtensionClass.has_one in a future major release
      */
     private static $has_one = [
         'FromExtensionHasOne' => DataObject::class,

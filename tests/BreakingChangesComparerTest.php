@@ -857,7 +857,7 @@ class BreakingChangesComparerTest extends TestCase
                             'file' => __DIR__ . '/fixture-code/cloned/from/vendor/some-org/module1/code/Extension/ExtensionClassTwo.php',
                             'class' => 'SomeOrg\Module1\Extension\ExtensionClassTwo',
                             'apiType' => 'config',
-                            'message' => 'Will be replaced with SomeOrg\Module1\Extension\ExtensionClass.has_one',
+                            'message' => 'Will be replaced with SomeOrg\Module1\Extension\ExtensionClass.has_one in a future major release',
                         ],
                         'SomeOrg\Module1\Model\ModelOne->someConfig' => [
                             'name' => 'someConfig',
