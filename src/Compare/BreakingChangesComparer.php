@@ -1032,10 +1032,6 @@ class BreakingChangesComparer
             return false;
         }
 
-        if ($parameterFrom->getName() === 'thirdMethod') {
-            echo '';
-        }
-
         // `string $something = null` is the same as `?string $something = null`
         // But don't ignore if the `string` part changes - i.e. `?string` and `?int` are not the same!
         if (($parameterFrom->getDefault() === 'null' || $this->hintIsNullable($parameterFrom->getHint()))
