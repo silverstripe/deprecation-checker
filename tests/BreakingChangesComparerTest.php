@@ -40,11 +40,15 @@ class BreakingChangesComparerTest extends TestCase
                 'type' => 'theme',
                 'packagist' => 'some-org/some-theme',
             ],
-            // We need to include framework with some stubs for some of the type checks
+            // We need to include these with some stubs for some of the type checks
             // e.g. checking for the configurable trait on DataObject subclasses.
             'silverstripe/framework' => [
                 'type' => 'module',
                 'packagist' => 'silverstripe/framework',
+            ],
+            'silverstripe/cms' => [
+                'type' => 'module',
+                'packagist' => 'silverstripe/cms',
             ],
         ];
         $factory = new ParserFactory($supportedModules, Path::join(__DIR__, 'fixture-code'));

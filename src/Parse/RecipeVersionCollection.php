@@ -38,7 +38,7 @@ class RecipeVersionCollection extends VersionCollection
      */
     public function getPackageNames(): array
     {
-        return array_keys($this->supportedModules);
+        return ['app', ...array_keys($this->supportedModules)];
     }
 
     /**
@@ -46,6 +46,9 @@ class RecipeVersionCollection extends VersionCollection
      */
     public function getPackagePath(string $package): string
     {
+        if ($package === 'app') {
+            return Path::join($this->basePath, CloneCommand::DIR_CLONE, $this->version, 'app');
+        }
         return realpath(Path::join($this->basePath, CloneCommand::DIR_CLONE, $this->version, '/vendor/', $package));
     }
 
