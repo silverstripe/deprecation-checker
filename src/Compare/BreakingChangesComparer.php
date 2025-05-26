@@ -1402,7 +1402,13 @@ class BreakingChangesComparer
      */
     private function getModuleForFile(string $filePath): string
     {
-        $regex = '#' . CloneCommand::DIR_CLONE. '/(?:' . BreakingChangesComparer::FROM . '|' . BreakingChangesComparer::TO . ')/vendor/([^/]+/[^/]+)/#';
+        $regexPrefix = '#' . CloneCommand::DIR_CLONE. '/(?:' . BreakingChangesComparer::FROM . '|' . BreakingChangesComparer::TO . ')';
+        // Instead of trying to figure out which recipe the code from app/src came from, just accept it's from one of them.
+        if (preg_match($regexPrefix . '/app/src/#', $filePath)) {
+            return 'app/src/ dir (from one of the recipes)';
+        }
+        // Find the module name based on the vendor dir
+        $regex = $regexPrefix . '/vendor/([^/]+/[^/]+)/#';
         preg_match($regex, $filePath, $matches);
         $module = $matches[1];
         if (!$module) {
