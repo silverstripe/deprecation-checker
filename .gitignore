@@ -4,5 +4,6 @@
 /cloned/
 /output/
 /cache/
+/tests/fixture-code/cache/
 composer.lock
 .phpunit.result.cache
