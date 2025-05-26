@@ -1126,6 +1126,14 @@ class BreakingChangesComparer
 
         // Check if API went missing
         if ($reflectionTo === null || $dataTo['file'] === null) {
+            // Constructors don't need any actions if there were no params
+            if (is_a($reflectionFrom, MethodReflection::class)
+                && $name === '__construct'
+                && count($reflectionFrom->getParameters()) === 0
+            ) {
+                return true;
+            }
+
             // Mark whether we still need to deprecate it, and note the breaking change.
             // Note params can't be marked deprecated.
             if ($type !== 'param' && !$reflectionFrom->isDeprecated()) {

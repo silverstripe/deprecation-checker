@@ -22,7 +22,7 @@ class ClassOne
 
     public bool $property5;
 
-    public function __construct()
+    public function __construct($param1)
     {
         // no-op
     }
